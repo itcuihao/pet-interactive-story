@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宠物陪伴模板编辑器</title>
+<!-- LogicFlow -->
+<script src="https://cdn.jsdelivr.net/npm/@logicflow/core/dist/index.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/@logicflow/core/lib/style/index.min.css" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700;900&family=Comfortaa:wght@400;700&display=swap');
+:root {
+  --bg-deep: #1a1410; --bg-panel: #211c16; --bg-input: #2a2318;
+  --border: #2e2820; --orange: #f5a623; --orange-dim: #f5a62344;
+  --pink: #e8838a; --gold: #ffd600; --cream: #fdf6e3;
+  --text: #e8dcc8; --text-dim: #8a7d6b; --radius: 8px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg-deep);color:var(--text);font-family:'Noto Sans SC',sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+
+/* Toolbar */
+#toolbar{height:48px;background:var(--bg-panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:6px;flex-shrink:0;z-index:100}
+.tb-btn{padding:6px 14px;background:rgba(245,166,35,.08);border:1px solid var(--orange-dim);border-radius:var(--radius);color:var(--text);font-size:13px;cursor:pointer;font-family:'Noto Sans SC',sans-serif;transition:all .2s;white-space:nowrap}
+.tb-btn:hover{background:rgba(245,166,35,.18);color:var(--cream)}
+.tb-sep{width:1px;height:24px;background:var(--border);margin:0 4px}
+.tb-title{font-family:'Comfortaa',sans-serif;font-size:13px;color:var(--orange);letter-spacing:1px;margin-right:8px}
+#toolbar-story-name{background:transparent;border:1px solid transparent;color:var(--cream);font-size:14px;font-family:'Noto Sans SC',sans-serif;padding:4px 8px;border-radius:var(--radius);margin-right:auto;min-width:120px}
+#toolbar-story-name:focus{border-color:var(--orange-dim);outline:none;background:var(--bg-input)}
+
+/* Layout */
+#main{flex:1;display:flex;min-height:0}
+
+/* Left panel */
+#left-panel{width:240px;background:var(--bg-panel);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.panel-section{padding:12px;border-bottom:1px solid var(--border)}
+.panel-title{font-family:'Comfortaa',sans-serif;font-size:10px;color:var(--orange);letter-spacing:2px;margin-bottom:8px}
+#node-search{width:100%;padding:6px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:12px;font-family:'Noto Sans SC',sans-serif;outline:none}
+#node-search:focus{border-color:var(--orange-dim)}
+#node-search::placeholder{color:var(--text-dim)}
+#node-list{flex:1;overflow-y:auto;padding:4px 12px}
+.node-list-item{padding:6px 8px;border-radius:var(--radius);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;margin-bottom:2px;transition:background .15s;color:var(--text-dim)}
+.node-list-item:hover{background:rgba(245,166,35,.08);color:var(--text)}
+.node-list-item.selected{background:rgba(245,166,35,.15);color:var(--orange)}
+.node-list-item.is-ending::before{content:'★';color:var(--pink);font-size:10px}
+.node-list-item.is-start::before{content:'▶';color:var(--gold);font-size:10px}
+.setting-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px}
+.setting-row label{color:var(--text-dim);white-space:nowrap;min-width:60px}
+.setting-row select,.setting-row input[type="number"]{flex:1;padding:4px 8px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:12px;font-family:'Noto Sans SC',sans-serif;outline:none}
+
+/* Canvas area - LogicFlow container */
+#canvas-area{flex:1;position:relative;overflow:hidden;background:#151110}
+#lf-container{width:100%;height:100%}
+
+/* Override LogicFlow styles for dark theme */
+.lf-graph{background:transparent !important}
+.lf-canvas-overlay,.lf-tool-overlay{background:transparent !important}
+.lf-dnd-shape{background:var(--bg-panel) !important;border:1px solid var(--orange) !important}
+
+/* Custom HTML node in LogicFlow */
+.lf-story-node{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);
+  width:200px;cursor:default;user-select:none;font-family:'Noto Sans SC',sans-serif;overflow:hidden;
+}
+.lf-story-node.lf-is-selected{border-color:var(--orange);box-shadow:0 0 16px rgba(245,166,35,.25)}
+.lf-story-node .sn-header{
+  padding:8px 10px;font-size:12px;font-weight:700;color:var(--cream);
+  background:rgba(245,166,35,.06);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+.lf-story-node .sn-badge{font-size:9px;padding:1px 5px;border-radius:4px;font-family:'Comfortaa',sans-serif;letter-spacing:1px}
+.sn-badge.ending{background:rgba(232,131,138,.2);color:var(--pink)}
+.sn-badge.start{background:rgba(255,214,0,.15);color:var(--gold)}
+.sn-badge.video{background:rgba(245,166,35,.15);color:var(--orange)}
+.lf-story-node .sn-body{padding:8px 10px;font-size:11px;color:var(--text-dim);max-height:52px;overflow:hidden;line-height:1.4}
+.lf-story-node .sn-choices{padding:4px 10px 8px;display:flex;flex-direction:column;gap:2px}
+.lf-story-node .sn-choice{font-size:10px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 0}
+.lf-story-node .sn-choice::before{content:'→ ';color:var(--orange)}
+
+/* LogicFlow edge style overrides */
+.lf-edge path,.lf-edge polyline{stroke:rgba(245,166,35,0.5) !important;stroke-width:2 !important}
+.lf-edge polygon{fill:rgba(245,166,35,0.5) !important;stroke:none !important}
+.lf-edge text{fill:var(--text-dim) !important;font-size:10px !important}
+.lf-edge:hover path,.lf-edge:hover polyline{stroke:var(--orange) !important}
+
+/* LogicFlow anchor points */
+.lf-anchor{fill:var(--orange) !important;r:5 !important;stroke:#1a1410 !important;stroke-width:2 !important}
+.lf-anchor-hover{r:8 !important;fill:var(--gold) !important}
+
+/* LogicFlow grid */
+.lf-grid{background-image:radial-gradient(circle,rgba(245,166,35,.06) 1px,transparent 1px) !important;background-size:20px 20px !important}
+
+/* Right panel */
+#right-panel{width:360px;background:var(--bg-panel);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+#right-empty-msg{color:var(--text-dim);font-size:13px;text-align:center;padding:20px;margin:auto}
+#right-form{flex:1;overflow-y:auto;padding:0}
+.form-section{padding:12px 14px;border-bottom:1px solid var(--border)}
+.form-section-title{font-family:'Comfortaa',sans-serif;font-size:10px;color:var(--orange);letter-spacing:2px;margin-bottom:8px}
+.form-row{margin-bottom:10px}
+.form-row label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px}
+.form-row input[type="text"],.form-row input[type="url"],.form-row input[type="number"],.form-row textarea,.form-row select{width:100%;padding:6px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:12px;font-family:'Noto Sans SC',sans-serif;outline:none;resize:vertical}
+.form-row input:focus,.form-row textarea:focus,.form-row select:focus{border-color:var(--orange-dim)}
+.form-row textarea{min-height:80px;line-height:1.6}
+
+/* Choice editor */
+.choice-editor-item{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin-bottom:8px}
+.choice-editor-item .choice-header{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.choice-editor-item .choice-num{font-family:'Comfortaa',sans-serif;font-size:10px;color:var(--orange);background:rgba(245,166,35,.12);border-radius:4px;padding:1px 6px}
+.choice-editor-item .choice-delete{margin-left:auto;background:none;border:none;color:var(--pink);cursor:pointer;font-size:14px;padding:0 4px;opacity:.6}
+.choice-editor-item .choice-delete:hover{opacity:1}
+.ce-input{width:100%;padding:4px 8px;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;font-family:'Noto Sans SC',sans-serif;outline:none;margin-bottom:4px}
+.ce-input:focus{border-color:var(--orange-dim)}
+.ce-select{width:100%;padding:4px 8px;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;font-family:'Noto Sans SC',sans-serif;outline:none;margin-bottom:4px}
+.choice-effects-row,.choice-requires-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px}
+.choice-effects-row input,.choice-requires-row input{width:50px;flex:none;padding:3px 6px;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;outline:none}
+.choice-effects-row label,.choice-requires-row label{font-size:10px;color:var(--text-dim);display:flex;align-items:center;gap:2px}
+.add-btn{width:100%;padding:6px;background:rgba(245,166,35,.06);border:1px dashed var(--orange-dim);border-radius:var(--radius);color:var(--orange);font-size:12px;cursor:pointer;font-family:'Noto Sans SC',sans-serif;transition:all .2s}
+.add-btn:hover{background:rgba(245,166,35,.12)}
+
+/* Overlay editor */
+.overlay-editor-item{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.ov-select{width:70px;padding:3px 6px;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;outline:none}
+.ov-input{padding:3px 6px;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;outline:none}
+.ov-text{flex:1;min-width:80px}.ov-pos{width:45px}.ov-delay{width:40px}
+.ov-delete{background:none;border:none;color:var(--pink);cursor:pointer;font-size:13px;padding:0 2px;opacity:.6}
+.ov-delete:hover{opacity:1}
+
+/* Video preview */
+.video-preview{margin-top:6px;border-radius:var(--radius);overflow:hidden;max-height:120px}
+.video-preview video{width:100%;max-height:120px;object-fit:cover}
+
+/* Delete / toast */
+.delete-node-btn{width:100%;padding:8px;background:rgba(232,131,138,.08);border:1px solid rgba(232,131,138,.3);border-radius:var(--radius);color:var(--pink);font-size:12px;cursor:pointer;font-family:'Noto Sans SC',sans-serif;transition:all .2s}
+.delete-node-btn:hover{background:rgba(232,131,138,.2)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);padding:10px 24px;background:var(--bg-panel);border:1px solid var(--orange-dim);border-radius:var(--radius);color:var(--cream);font-size:13px;z-index:999;pointer-events:none;opacity:0;transition:all .3s ease}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-dim)}
+/* Example template items */
+.example-item{padding:6px 8px;border-radius:var(--radius);font-size:12px;cursor:pointer;margin-bottom:3px;transition:all .15s;border:1px solid transparent;display:flex;align-items:flex-start;gap:8px}
+.example-item:hover{background:rgba(245,166,35,.1);border-color:var(--orange-dim)}
+.example-item .ex-icon{font-size:14px;flex-shrink:0;line-height:1.4}
+.example-item .ex-info{flex:1;min-width:0}
+.example-item .ex-name{color:var(--cream);font-size:12px;font-weight:700;margin-bottom:1px}
+.example-item .ex-desc{color:var(--text-dim);font-size:10px;line-height:1.3}
+.example-item .ex-meta{color:var(--orange);font-size:9px;font-family:'Comfortaa',sans-serif;margin-top:2px;letter-spacing:.5px}
+#import-input{position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <span class="tb-title">宠物陪伴模板编辑器</span>
+  <input type="text" id="toolbar-story-name" placeholder="故事名称">
+  <button class="tb-btn" id="btn-new">新建故事</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="btn-save">保存</button>
+  <button class="tb-btn" id="btn-export">导出 JSON</button>
+  <button class="tb-btn" id="btn-import">导入 JSON</button>
+  <input type="file" id="import-input" accept=".json">
+  <button class="tb-btn" id="btn-clear-cache" style="opacity:0.7" title="清除浏览器缓存，解决布局异常问题">🗑️ 清除缓存</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="btn-preview">▶ 预览播放</button>
+  <button class="tb-btn" id="btn-add-node">+ 添加节点</button>
+</div>
+<div id="main">
+  <div id="left-panel">
+    <div class="panel-section">
+      <div class="panel-title">示例模板</div>
+      <div id="example-list"></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">节点列表</div>
+      <input type="text" id="node-search" placeholder="搜索节点...">
+    </div>
+    <div id="node-list"></div>
+    <div class="panel-section">
+      <div class="panel-title">故事设置</div>
+      <div class="setting-row"><label>起始节点</label><select id="setting-start"></select></div>
+      <div class="setting-row"><label>体力</label><input type="number" id="setting-energy" min="0" max="100"></div>
+      <div class="setting-row"><label>心情</label><input type="number" id="setting-mood" min="0" max="100"></div>
+      <div class="setting-row"><label>饱腹</label><input type="number" id="setting-fullness" min="0" max="100"></div>
+    </div>
+  </div>
+  <div id="canvas-area">
+    <div id="lf-container"></div>
+  </div>
+  <div id="right-panel">
+    <div id="right-empty-msg">选择一个节点进行编辑<br><br><span style="font-size:11px;color:var(--text-dim)">拖拽节点移动位置<br>从锚点拖出连线<br>点击节点编辑内容</span></div>
+    <div id="right-form" style="display:none"></div>
+  </div>
+</div>
+<div id="toast"></div>
+<script src="story-data.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
