@@ -3,6 +3,7 @@ import type { StoryChoice, StoryDocument, StoryScene } from "@/types";
 import type { SelectOption } from "@/types";
 import { getLinearNextSceneId } from "@/lib/player";
 import { Button } from "@/components/ui/button";
+import { ChevronUpIcon, ChevronDownIcon, XIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -51,9 +52,9 @@ export function ScenesStep({ story, scenes, sceneOptions, onBack, onNext, onAddS
                 {scene.choices.length ? <Badge variant="outline">{scene.choices.length} 个选择</Badge> : null}
               </div>
               <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                <button type="button" className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-foreground transition-colors" onClick={() => onMoveScene(scene.id, -1)} title="上移">&#8593;</button>
-                <button type="button" className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-foreground transition-colors" onClick={() => onMoveScene(scene.id, 1)} title="下移">&#8595;</button>
-                <button type="button" className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={() => onRemoveScene(scene.id)} title="删除">&#10005;</button>
+                <button type="button" className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-foreground transition-colors" onClick={() => onMoveScene(scene.id, -1)} title="上移"><ChevronUpIcon className="h-4 w-4" /></button>
+                <button type="button" className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-foreground transition-colors" onClick={() => onMoveScene(scene.id, 1)} title="下移"><ChevronDownIcon className="h-4 w-4" /></button>
+                <button type="button" className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={() => onRemoveScene(scene.id)} title="删除"><XIcon className="h-4 w-4" /></button>
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-[18px] pb-4">

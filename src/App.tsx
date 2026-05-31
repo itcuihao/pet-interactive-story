@@ -1,24 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { PreviewStep } from "@/components/workbench/PreviewStep";
 import { AppShell } from "@/components/workbench/AppShell";
 import { RecentStoriesList } from "@/components/workbench/RecentStoriesList";
-import { ScenesStep } from "@/components/workbench/ScenesStep";
 import { SidebarPanel } from "@/components/workbench/SidebarPanel";
 import { StoriesGallery } from "@/components/workbench/StoriesGallery";
-import { StoryInfoStep } from "@/components/workbench/StoryInfoStep";
 import { StoryPlayer } from "@/components/workbench/StoryPlayer";
 import { TemplatePicker } from "@/components/workbench/TemplatePicker";
 import { WorkspaceHeader } from "@/components/workbench/WorkspaceHeader";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { PanelCard } from "@/components/ui/PanelCard";
-import type { SelectOption } from "@/types";
 import { WizardTabs } from "@/components/ui/WizardTabs";
-import { createBlankStory, createScene, createStoryFromTemplate, getTemplates, normalizeStory } from "@/lib/story";
+import { createBlankStory, createStoryFromTemplate, getTemplates, normalizeStory } from "@/lib/story";
 import { deleteStory, getStory, listStories, saveStory } from "@/lib/idb";
-import { downloadStoryAsHtml, downloadStoryAsJson, importStoryFromJson, validateStoryForExport } from "@/lib/export";
-import type { StoryDocument, StoryMedia, StoryScene } from "@/types";
-import { ArrowLeftIcon, PlusIcon } from "lucide-react";
+import { importStoryFromJson } from "@/lib/export";
+import type { StoryDocument } from "@/types";
+import { useStoryEditor, STEP_LABELS } from "@/lib/useStoryEditor";
+import type { WizardStep } from "@/lib/useStoryEditor";
+import { ArrowLeftIcon, PlusIcon, XIcon } from "lucide-react";
 
 type Route =
   | { kind: "home" }
@@ -26,14 +24,6 @@ type Route =
   | { kind: "share"; id: string };
 
 type AppView = "workbench" | "gallery" | "editor";
-
-type WizardStep = "story" | "scenes" | "preview";
-
-const STEP_LABELS: Array<{ id: WizardStep; label: string; hint: string }> = [
-  { id: "story", label: "基本信息", hint: "写下名字、标题和封面" },
-  { id: "scenes", label: "编辑片段", hint: "按顺序编辑每个片段" },
-  { id: "preview", label: "分享导出", hint: "预览并生成分享页" },
-];
 
 function parseRoute(): Route {
   const hash = window.location.hash.replace(/^#/, "") || "/";
@@ -136,7 +126,7 @@ export function App() {
     return (
       <>
         <div className="min-h-screen">
-          <div className="sticky top-0 z-20 p-4">
+          <div className="sticky top-0 z-20 p-4 backdrop-blur-xl bg-background/80">
             <Button variant="outline" onClick={() => setView("workbench")}>返回工作台</Button>
           </div>
           <StoriesGallery
@@ -174,6 +164,7 @@ export function App() {
         onDelete={() => void handleDeleteStory(activeStory.id)}
         onPreview={() => pushRoute({ kind: "preview", id: activeStory.id })}
         onSharePreview={() => pushRoute({ kind: "share", id: activeStory.id })}
+        immersive
       />
     );
   }
@@ -212,9 +203,10 @@ export function App() {
       header={<WorkspaceHeader message={message} />}
     >
       {activeStory ? (
-        <StoryEditorInline
+        <StoryEditor
           key={activeStory.id}
           story={activeStory}
+          onBack={undefined}
           onChange={async (nextStory) => {
             const normalized = normalizeStory(nextStory);
             await saveStory(normalized);
@@ -235,141 +227,7 @@ export function App() {
   );
 }
 
-/**
- * Editor rendered inside the workbench (sidebar visible).
- * Shares the same logic as the immersive StoryEditor but without the sticky back button header.
- */
-function StoryEditorInline({
-  story,
-  onChange,
-  onDelete,
-  onPreview,
-  onSharePreview,
-}: {
-  story: StoryDocument;
-  onChange: (story: StoryDocument) => Promise<void>;
-  onDelete: () => void;
-  onPreview: () => void;
-  onSharePreview: () => void;
-}) {
-  const [draft, setDraft] = useState(story);
-  const [step, setStep] = useState<WizardStep>("story");
-  const [exportIssues, setExportIssues] = useState<ReturnType<typeof validateStoryForExport>["issues"]>([]);
-
-  useEffect(() => {
-    setDraft(story);
-    setExportIssues([]);
-  }, [story]);
-
-  async function update(next: StoryDocument) {
-    setDraft(next);
-    await onChange(next);
-  }
-
-  function patchStory(patch: Partial<StoryDocument>) {
-    void update({ ...draft, ...patch, updatedAt: new Date().toISOString() });
-  }
-
-  function updateScene(sceneId: string, updater: (scene: StoryScene) => StoryScene) {
-    void update({
-      ...draft,
-      scenes: draft.scenes.map((scene) => (scene.id === sceneId ? updater(scene) : scene)),
-      updatedAt: new Date().toISOString(),
-    });
-  }
-
-  function addScene() {
-    const scene = createScene();
-    void update({ ...draft, scenes: [...draft.scenes, scene], updatedAt: new Date().toISOString() });
-  }
-
-  function removeScene(sceneId: string) {
-    if (draft.scenes.length <= 1) return;
-    const scenes = draft.scenes.filter((scene) => scene.id !== sceneId);
-    const nextSceneId = draft.startSceneId === sceneId ? scenes[0].id : draft.startSceneId;
-    const repairedScenes = scenes.map((scene) => ({
-      ...scene,
-      choices: scene.choices.filter((choice) => choice.nextSceneId !== sceneId),
-    }));
-    void update({ ...draft, scenes: repairedScenes, startSceneId: nextSceneId, updatedAt: new Date().toISOString() });
-  }
-
-  function moveScene(sceneId: string, direction: -1 | 1) {
-    const index = draft.scenes.findIndex((scene) => scene.id === sceneId);
-    const target = index + direction;
-    if (index < 0 || target < 0 || target >= draft.scenes.length) return;
-    const scenes = [...draft.scenes];
-    [scenes[index], scenes[target]] = [scenes[target], scenes[index]];
-    void update({ ...draft, scenes, updatedAt: new Date().toISOString() });
-  }
-
-  function setCover(media?: StoryMedia) {
-    void update({ ...draft, cover: media, updatedAt: new Date().toISOString() });
-  }
-
-  function handleExportHtml() {
-    const result = validateStoryForExport(draft);
-    setExportIssues(result.issues);
-    if (!result.ok) return;
-    downloadStoryAsHtml(draft);
-  }
-
-  function goPrevStep() {
-    const index = STEP_LABELS.findIndex((item) => item.id === step);
-    if (index > 0) setStep(STEP_LABELS[index - 1].id);
-  }
-
-  function goNextStep() {
-    const index = STEP_LABELS.findIndex((item) => item.id === step);
-    if (index < STEP_LABELS.length - 1) setStep(STEP_LABELS[index + 1].id);
-  }
-
-  const sceneOptions: SelectOption[] = draft.scenes.map((scene) => ({
-    value: scene.id,
-    label: scene.title || "未命名片段",
-    description: scene.background || undefined,
-  }));
-
-  const items = STEP_LABELS.map((item) => ({
-    ...item,
-    content:
-      item.id === "story" ? (
-        <StoryInfoStep draft={draft} sceneOptions={sceneOptions} onNext={goNextStep} onPatchStory={patchStory} onSetCover={setCover} />
-      ) : item.id === "scenes" ? (
-        <ScenesStep story={draft} scenes={draft.scenes} sceneOptions={sceneOptions} onBack={goPrevStep} onNext={goNextStep} onAddScene={addScene} onUpdateScene={updateScene} onMoveScene={moveScene} onRemoveScene={removeScene} />
-      ) : (
-        <PreviewStep draft={draft} onBack={goPrevStep} onPreview={onPreview} onSharePreview={onSharePreview} onExportJson={() => downloadStoryAsJson(draft)} onExportHtml={handleExportHtml} exportIssues={exportIssues} />
-      ),
-  }));
-
-  return (
-    <div className="grid gap-[18px]">
-      <div className="flex justify-between items-center gap-4 p-3 rounded-[20px] bg-secondary border border-primary/10">
-        <h2 className="font-serif text-lg font-semibold truncate">{draft.title || "未命名故事"}</h2>
-        <AlertDialog>
-          <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>删除作品</AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>移走这份本地作品？</AlertDialogTitle>
-              <AlertDialogDescription>这会删除当前浏览器里的本地存档。已经导出的分享页和 JSON 文件不会受影响。</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>先保留</AlertDialogCancel>
-              <AlertDialogAction onClick={onDelete}>确认删除</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-      <PanelCard tone="default">
-        <WizardTabs value={step} onValueChange={(value) => setStep(value as WizardStep)} items={items} />
-      </PanelCard>
-    </div>
-  );
-}
-
-/**
- * Full-screen immersive editor (no sidebar).
- */
+/** Shared editor component for both inline and immersive modes. */
 function StoryEditor({
   story,
   onBack,
@@ -377,139 +235,70 @@ function StoryEditor({
   onDelete,
   onPreview,
   onSharePreview,
+  immersive,
 }: {
   story: StoryDocument;
-  onBack: () => void;
+  onBack?: () => void;
   onChange: (story: StoryDocument) => Promise<void>;
   onDelete: () => void;
   onPreview: () => void;
   onSharePreview: () => void;
+  immersive?: boolean;
 }) {
-  const [draft, setDraft] = useState(story);
-  const [step, setStep] = useState<WizardStep>("story");
-  const [exportIssues, setExportIssues] = useState<ReturnType<typeof validateStoryForExport>["issues"]>([]);
+  const { draft, step, setStep, items } = useStoryEditor(story, onChange, onPreview, onSharePreview);
 
-  useEffect(() => {
-    setDraft(story);
-    setExportIssues([]);
-  }, [story]);
+  const headerBar = (
+    <div className="flex justify-between items-center gap-4 p-3 rounded-[20px] bg-secondary/90 border border-primary/10 backdrop-blur-xl">
+      <div className="flex items-center gap-3 min-w-0">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-foreground transition-colors"
+            title="返回列表"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+          </button>
+        )}
+        <h2 className="font-serif text-lg font-semibold truncate">{draft.title || "未命名故事"}</h2>
+      </div>
+      <AlertDialog>
+        <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>删除作品</AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>移走这份本地作品？</AlertDialogTitle>
+            <AlertDialogDescription>这会删除当前浏览器里的本地存档。已经导出的分享页和 JSON 文件不会受影响。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>先保留</AlertDialogCancel>
+            <AlertDialogAction onClick={onDelete}>确认删除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
 
-  async function update(next: StoryDocument) {
-    setDraft(next);
-    await onChange(next);
-  }
-
-  function patchStory(patch: Partial<StoryDocument>) {
-    void update({ ...draft, ...patch, updatedAt: new Date().toISOString() });
-  }
-
-  function updateScene(sceneId: string, updater: (scene: StoryScene) => StoryScene) {
-    void update({
-      ...draft,
-      scenes: draft.scenes.map((scene) => (scene.id === sceneId ? updater(scene) : scene)),
-      updatedAt: new Date().toISOString(),
-    });
-  }
-
-  function addScene() {
-    const scene = createScene();
-    void update({ ...draft, scenes: [...draft.scenes, scene], updatedAt: new Date().toISOString() });
-  }
-
-  function removeScene(sceneId: string) {
-    if (draft.scenes.length <= 1) return;
-    const scenes = draft.scenes.filter((scene) => scene.id !== sceneId);
-    const nextSceneId = draft.startSceneId === sceneId ? scenes[0].id : draft.startSceneId;
-    const repairedScenes = scenes.map((scene) => ({
-      ...scene,
-      choices: scene.choices.filter((choice) => choice.nextSceneId !== sceneId),
-    }));
-    void update({ ...draft, scenes: repairedScenes, startSceneId: nextSceneId, updatedAt: new Date().toISOString() });
-  }
-
-  function moveScene(sceneId: string, direction: -1 | 1) {
-    const index = draft.scenes.findIndex((scene) => scene.id === sceneId);
-    const target = index + direction;
-    if (index < 0 || target < 0 || target >= draft.scenes.length) return;
-    const scenes = [...draft.scenes];
-    [scenes[index], scenes[target]] = [scenes[target], scenes[index]];
-    void update({ ...draft, scenes, updatedAt: new Date().toISOString() });
-  }
-
-  function setCover(media?: StoryMedia) {
-    void update({ ...draft, cover: media, updatedAt: new Date().toISOString() });
-  }
-
-  function handleExportHtml() {
-    const result = validateStoryForExport(draft);
-    setExportIssues(result.issues);
-    if (!result.ok) return;
-    downloadStoryAsHtml(draft);
-  }
-
-  function goPrevStep() {
-    const index = STEP_LABELS.findIndex((item) => item.id === step);
-    if (index > 0) setStep(STEP_LABELS[index - 1].id);
-  }
-
-  function goNextStep() {
-    const index = STEP_LABELS.findIndex((item) => item.id === step);
-    if (index < STEP_LABELS.length - 1) setStep(STEP_LABELS[index + 1].id);
-  }
-
-  const sceneOptions: SelectOption[] = draft.scenes.map((scene) => ({
-    value: scene.id,
-    label: scene.title || "未命名片段",
-    description: scene.background || undefined,
-  }));
-
-  const items = STEP_LABELS.map((item) => ({
-    ...item,
-    content:
-      item.id === "story" ? (
-        <StoryInfoStep draft={draft} sceneOptions={sceneOptions} onNext={goNextStep} onPatchStory={patchStory} onSetCover={setCover} />
-      ) : item.id === "scenes" ? (
-        <ScenesStep story={draft} scenes={draft.scenes} sceneOptions={sceneOptions} onBack={goPrevStep} onNext={goNextStep} onAddScene={addScene} onUpdateScene={updateScene} onMoveScene={moveScene} onRemoveScene={removeScene} />
-      ) : (
-        <PreviewStep draft={draft} onBack={goPrevStep} onPreview={onPreview} onSharePreview={onSharePreview} onExportJson={() => downloadStoryAsJson(draft)} onExportHtml={handleExportHtml} exportIssues={exportIssues} />
-      ),
-  }));
-
-  return (
-    <div className="min-h-screen">
-      <div className="sticky top-0 z-20 p-3 px-5">
-        <div className="flex justify-between items-center gap-4 p-3 rounded-[20px] bg-secondary/90 border border-primary/10 backdrop-blur-xl">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              type="button"
-              onClick={onBack}
-              className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-foreground transition-colors"
-              title="返回列表"
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-            </button>
-            <h2 className="font-serif text-lg font-semibold truncate">{draft.title || "未命名故事"}</h2>
-          </div>
-          <AlertDialog>
-            <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>删除作品</AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>移走这份本地作品？</AlertDialogTitle>
-                <AlertDialogDescription>这会删除当前浏览器里的本地存档。已经导出的分享页和 JSON 文件不会受影响。</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>先保留</AlertDialogCancel>
-                <AlertDialogAction onClick={onDelete}>确认删除</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+  if (immersive) {
+    return (
+      <div className="min-h-screen">
+        <div className="sticky top-0 z-20 p-3 px-5">
+          {headerBar}
+        </div>
+        <div className="px-5 pb-8 max-w-3xl mx-auto">
+          <PanelCard tone="default">
+            <WizardTabs value={step} onValueChange={(value) => setStep(value as WizardStep)} items={items} />
+          </PanelCard>
         </div>
       </div>
-      <div className="px-5 pb-8 max-w-3xl mx-auto">
-        <PanelCard tone="default">
-          <WizardTabs value={step} onValueChange={(value) => setStep(value as WizardStep)} items={items} />
-        </PanelCard>
-      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-[18px]">
+      {headerBar}
+      <PanelCard tone="default">
+        <WizardTabs value={step} onValueChange={(value) => setStep(value as WizardStep)} items={items} />
+      </PanelCard>
     </div>
   );
 }
@@ -522,10 +311,28 @@ function PreviewScreen({
   onBack: () => void;
 }) {
   const [story, setStory] = useState<StoryDocument | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void getStory(route.id).then((item) => setStory(item ?? null));
+    setLoading(true);
+    void getStory(route.id).then((item) => {
+      setStory(item ?? null);
+      setLoading(false);
+    });
   }, [route.id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen p-5">
+        <Button variant="outline" className="sticky top-[18px] z-20 mb-4" onClick={onBack}>
+          返回工作台
+        </Button>
+        <PanelCard tone="soft" className="grid gap-3 p-[34px]">
+          <p className="text-muted">正在加载…</p>
+        </PanelCard>
+      </div>
+    );
+  }
 
   if (!story) {
     return (
@@ -547,9 +354,10 @@ function PreviewScreen({
         <StoryPlayer story={story} shareMode />
         <button
           onClick={onBack}
-          className="fixed top-4 left-4 z-50 w-9 h-9 rounded-full bg-black/40 text-white/50 flex items-center justify-center text-base hover:bg-black/60 hover:text-white transition-colors backdrop-blur-sm"
+          aria-label="关闭"
+          className="fixed top-4 left-4 z-50 w-9 h-9 rounded-full bg-black/40 text-white/50 flex items-center justify-center hover:bg-black/60 hover:text-white transition-colors backdrop-blur-sm"
         >
-          &#x2715;
+          <XIcon className="h-4 w-4" />
         </button>
       </div>
     );

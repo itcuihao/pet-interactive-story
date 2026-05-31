@@ -31,7 +31,7 @@ export function RecentStoriesList({ busy, stories, activeStoryId, onSelect, onIm
                 className={`text-left rounded-xl border p-3 grid gap-0.5 transition-colors ${story.id === activeStoryId ? "border-primary/34 bg-gradient-to-b from-white/98 to-orange-50/96" : "border-transparent bg-white/88 hover:border-primary/24"}`}
                 onClick={() => onSelect(story.id)}
               >
-                <strong className="text-foreground text-sm">{story.title}</strong>
+                <strong className="text-foreground text-sm">{story.title || "未命名故事"}</strong>
                 <span className="text-muted text-xs">{story.petName}</span>
               </button>
             ))}

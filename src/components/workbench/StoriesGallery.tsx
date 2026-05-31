@@ -156,7 +156,7 @@ function CoverImage({ media }: { media?: StoryMedia }) {
 
   if (!src) return null;
   if (media?.type === "video") {
-    return <video src={src} className="w-full h-full object-cover" muted />;
+    return <video src={src} className="w-full h-full object-cover" muted autoPlay loop playsInline />;
   }
   return <img src={src} alt="" className="w-full h-full object-cover" />;
 }
