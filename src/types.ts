@@ -1,8 +1,24 @@
 export type StoryMode = "template" | "graph";
+export type MediaSource = "url" | "upload";
 
 export type StoryMedia =
-  | { type: "image"; src: string; embedded?: boolean }
-  | { type: "video"; src: string };
+  | {
+      type: "image";
+      src: string;
+      embedded?: boolean;
+      source?: MediaSource;
+      mimeType?: string;
+      sizeBytes?: number;
+    }
+  | {
+      type: "video";
+      src: string;
+      source?: MediaSource;
+      mediaId?: string;
+      mimeType?: string;
+      sizeBytes?: number;
+      durationSec?: number;
+    };
 
 export type StoryChoice = {
   id: string;

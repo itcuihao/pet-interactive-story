@@ -286,7 +286,7 @@ export function createBlankStory(): StoryDocument {
     id,
     title: "新的温馨回忆",
     petName: "小家伙",
-    summary: "把和宠物一起度过的片段温柔地留下来。",
+    summary: "把一起度过的日常，慢慢收进一段温柔回忆。",
     mode: "template",
     templateName: "空白故事",
     startSceneId: firstSceneId,
