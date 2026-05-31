@@ -18,7 +18,7 @@ import { createBlankStory, createScene, createStoryFromTemplate, getTemplates, n
 import { deleteStory, getStory, listStories, saveStory } from "@/lib/idb";
 import { downloadStoryAsHtml, downloadStoryAsJson, importStoryFromJson, validateStoryForExport } from "@/lib/export";
 import type { StoryDocument, StoryMedia, StoryScene } from "@/types";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, PlusIcon } from "lucide-react";
 
 type Route =
   | { kind: "home" }
@@ -185,6 +185,9 @@ export function App() {
           <SidebarPanel hero>
             <h1 className="font-serif text-[clamp(28px,3vw,42px)] font-semibold leading-[1.08] tracking-tight">宠爱时光</h1>
             <p className="text-muted leading-relaxed text-sm">从点滴片段开始，慢慢整理成你们的宠爱时光。</p>
+            <Button className="w-full" onClick={() => setTemplatePickerOpen(true)}>
+              <PlusIcon className="h-4 w-4" />新建故事
+            </Button>
             <TemplatePicker
               templates={templates}
               open={templatePickerOpen}
