@@ -1,37 +1,35 @@
 import { useEffect, useMemo, useState } from "react";
-import { PreviewStep } from "./components/workbench/PreviewStep";
-import { AppShell } from "./components/workbench/AppShell";
-import { BranchesStep } from "./components/workbench/BranchesStep";
-import { RecentStoriesList } from "./components/workbench/RecentStoriesList";
-import { ScenesStep } from "./components/workbench/ScenesStep";
-import { SidebarPanel } from "./components/workbench/SidebarPanel";
-import { StoryInfoStep } from "./components/workbench/StoryInfoStep";
-import { StoryPlayer } from "./components/workbench/StoryPlayer";
-import { TemplatePicker } from "./components/workbench/TemplatePicker";
-import { WorkspaceHeader } from "./components/workbench/WorkspaceHeader";
-import { Button } from "./components/ui/Button";
-import { ConfirmDialog } from "./components/ui/Dialog";
-import { PanelCard } from "./components/ui/PanelCard";
-import type { SelectOption } from "./components/ui/SelectField";
-import { WizardTabs } from "./components/ui/WizardTabs";
-import { createBlankStory, createScene, createStoryFromTemplate, getTemplates, normalizeStory } from "./lib/story";
-import { deleteStory, getStory, listStories, saveStory } from "./lib/idb";
-import { downloadStoryAsHtml, downloadStoryAsJson, importStoryFromJson, validateStoryForExport } from "./lib/export";
-import type { StoryDocument, StoryMedia, StoryScene } from "./types";
+import { PreviewStep } from "@/components/workbench/PreviewStep";
+import { AppShell } from "@/components/workbench/AppShell";
+import { RecentStoriesList } from "@/components/workbench/RecentStoriesList";
+import { ScenesStep } from "@/components/workbench/ScenesStep";
+import { SidebarPanel } from "@/components/workbench/SidebarPanel";
+import { StoryInfoStep } from "@/components/workbench/StoryInfoStep";
+import { StoryPlayer } from "@/components/workbench/StoryPlayer";
+import { TemplatePicker } from "@/components/workbench/TemplatePicker";
+import { WorkspaceHeader } from "@/components/workbench/WorkspaceHeader";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { PanelCard } from "@/components/ui/PanelCard";
+import type { SelectOption } from "@/types";
+import { WizardTabs } from "@/components/ui/WizardTabs";
+import { createBlankStory, createScene, createStoryFromTemplate, getTemplates, normalizeStory } from "@/lib/story";
+import { deleteStory, getStory, listStories, saveStory } from "@/lib/idb";
+import { downloadStoryAsHtml, downloadStoryAsJson, importStoryFromJson, validateStoryForExport } from "@/lib/export";
+import type { StoryDocument, StoryMedia, StoryScene } from "@/types";
+import { ArrowLeftIcon } from "lucide-react";
 
 type Route =
   | { kind: "home" }
   | { kind: "preview"; id: string }
   | { kind: "share"; id: string };
 
-type WizardStep = "template" | "story" | "scenes" | "branches" | "preview";
+type WizardStep = "story" | "scenes" | "preview";
 
 const STEP_LABELS: Array<{ id: WizardStep; label: string; hint: string }> = [
-  { id: "template", label: "选择模板", hint: "确认这份故事从哪里开始" },
-  { id: "story", label: "故事信息", hint: "写下名字、标题和封面" },
-  { id: "scenes", label: "回忆片段", hint: "按顺序把日常片段放进去" },
-  { id: "branches", label: "互动分支", hint: "最后再轻轻补上选择" },
-  { id: "preview", label: "预览导出", hint: "检查并生成分享页" },
+  { id: "story", label: "基本信息", hint: "写下名字、标题和封面" },
+  { id: "scenes", label: "编辑片段", hint: "按顺序编辑每个片段" },
+  { id: "preview", label: "分享导出", hint: "预览并生成分享页" },
 ];
 
 function parseRoute(): Route {
@@ -55,6 +53,7 @@ export function App() {
   const [activeStoryId, setActiveStoryId] = useState("");
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState("从一个温柔模板开始。");
+  const [immersive, setImmersive] = useState(false);
   const templates = useMemo(() => getTemplates(), []);
 
   useEffect(() => {
@@ -89,6 +88,7 @@ export function App() {
     await saveStory(story);
     await refreshStories(story.id);
     setMessage(`已从「${story.templateName || "模板"}」开始记录。`);
+    setImmersive(true);
   }
 
   async function handleCreateBlank() {
@@ -96,12 +96,14 @@ export function App() {
     await saveStory(story);
     await refreshStories(story.id);
     setMessage("已新建空白故事。");
+    setImmersive(true);
   }
 
   async function handleDeleteStory(storyId: string) {
     await deleteStory(storyId);
     await refreshStories();
     setMessage("这份本地作品已经移走。");
+    setImmersive(false);
   }
 
   async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
@@ -114,20 +116,23 @@ export function App() {
     event.target.value = "";
   }
 
+  function handleSelectStory(storyId: string) {
+    setActiveStoryId(storyId);
+    setImmersive(true);
+  }
+
   if (route.kind !== "home") {
     return <PreviewScreen route={route} onBack={() => pushRoute({ kind: "home" })} />;
   }
 
   return (
     <AppShell
+      sidebarHidden={immersive}
       sidebar={
         <>
           <SidebarPanel hero>
-            <div className="eyebrow">开始记录</div>
-            <h1>宠爱时光</h1>
-            <p className="lede">从点滴片段开始，慢慢整理成你们的宠爱时光。</p>
-          </SidebarPanel>
-          <SidebarPanel>
+            <h1 className="font-serif text-[clamp(28px,3vw,42px)] font-semibold leading-[1.08] tracking-tight">宠爱时光</h1>
+            <p className="text-muted leading-relaxed text-sm">从点滴片段开始，慢慢整理成你们的宠爱时光。</p>
             <TemplatePicker
               templates={templates}
               onCreateBlank={() => void handleCreateBlank()}
@@ -139,7 +144,7 @@ export function App() {
               busy={busy}
               stories={stories}
               activeStoryId={activeStory?.id}
-              onSelect={setActiveStoryId}
+              onSelect={handleSelectStory}
               onImport={handleImport}
             />
           </SidebarPanel>
@@ -151,6 +156,8 @@ export function App() {
         <StoryEditor
           key={activeStory.id}
           story={activeStory}
+          immersive={immersive}
+          onExitImmersive={() => setImmersive(false)}
           onChange={async (nextStory) => {
             const normalized = normalizeStory(nextStory);
             await saveStory(normalized);
@@ -162,9 +169,9 @@ export function App() {
           onSharePreview={() => pushRoute({ kind: "share", id: activeStory.id })}
         />
       ) : (
-        <PanelCard className="empty-state" tone="soft">
-          <h2>先选一个模板，再慢慢把今天放进去。</h2>
-          <p>别急着先想复杂分支。先把片段写下来，后面的互动自然就会清楚。</p>
+        <PanelCard tone="soft" className="grid gap-3 p-[34px]">
+          <h2 className="font-serif text-2xl font-semibold">先选一个模板，再慢慢把今天放进去。</h2>
+          <p className="text-muted">别急着先想复杂分支。先把片段写下来，后面的互动自然就会清楚。</p>
         </PanelCard>
       )}
     </AppShell>
@@ -173,26 +180,27 @@ export function App() {
 
 function StoryEditor({
   story,
+  immersive,
+  onExitImmersive,
   onChange,
   onDelete,
   onPreview,
   onSharePreview,
 }: {
   story: StoryDocument;
+  immersive: boolean;
+  onExitImmersive: () => void;
   onChange: (story: StoryDocument) => Promise<void>;
   onDelete: () => void;
   onPreview: () => void;
   onSharePreview: () => void;
 }) {
   const [draft, setDraft] = useState(story);
-  const [step, setStep] = useState<WizardStep>("template");
-  const [showAdvancedGraph, setShowAdvancedGraph] = useState(story.mode === "graph");
+  const [step, setStep] = useState<WizardStep>("story");
   const [exportIssues, setExportIssues] = useState<ReturnType<typeof validateStoryForExport>["issues"]>([]);
-  const templates = useMemo(() => getTemplates(), []);
 
   useEffect(() => {
     setDraft(story);
-    setShowAdvancedGraph(story.mode === "graph");
     setExportIssues([]);
   }, [story]);
 
@@ -273,7 +281,6 @@ function StoryEditor({
     if (index < STEP_LABELS.length - 1) setStep(STEP_LABELS[index + 1].id);
   }
 
-  const currentTemplate = templates.find((template) => template.id === draft.templateId);
   const sceneOptions: SelectOption[] = draft.scenes.map((scene) => ({
     value: scene.id,
     label: scene.title || "未命名片段",
@@ -283,63 +290,23 @@ function StoryEditor({
   const items = STEP_LABELS.map((item) => ({
     ...item,
     content:
-      item.id === "template" ? (
-        <section className="step-panel">
-          <div className="section-head">
-            <h2>1. 选择模板</h2>
-            <Button variant="primary" onClick={goNextStep}>
-              下一步
-            </Button>
-          </div>
-          <p className="helper-text">这一步不用重新选模板。先确认这份故事是从哪种日常情绪开始的，后面才更容易往里放片段。</p>
-          <PanelCard className="template-current" tone="highlight">
-            <strong>{draft.templateName || "空白故事"}</strong>
-            <p>{currentTemplate?.description || "这份故事没有预设模板，你可以按自己的节奏慢慢写。"}</p>
-          </PanelCard>
-          <div className="template-mini-grid">
-            {templates.map((template) => (
-              <div
-                key={template.id}
-                className={`template-mini accent-${template.accent} ${draft.templateId === template.id ? "selected" : ""}`}
-              >
-                <strong>{template.name}</strong>
-                <span>{template.description}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : item.id === "story" ? (
+      item.id === "story" ? (
         <StoryInfoStep
           draft={draft}
           sceneOptions={sceneOptions}
-          onBack={goPrevStep}
           onNext={goNextStep}
           onPatchStory={patchStory}
           onSetCover={setCover}
         />
       ) : item.id === "scenes" ? (
         <ScenesStep
+          story={draft}
           scenes={draft.scenes}
+          sceneOptions={sceneOptions}
           onBack={goPrevStep}
           onNext={goNextStep}
           onAddScene={addScene}
           onUpdateScene={updateScene}
-          onMoveScene={moveScene}
-          onRemoveScene={removeScene}
-        />
-      ) : item.id === "branches" ? (
-        <BranchesStep
-          story={draft}
-          sceneOptions={sceneOptions}
-          showAdvancedGraph={showAdvancedGraph}
-          onToggleAdvancedGraph={() => {
-            const next = !showAdvancedGraph;
-            setShowAdvancedGraph(next);
-            patchStory({ mode: next ? "graph" : "template" });
-          }}
-          onBack={goPrevStep}
-          onNext={goNextStep}
-          onSceneChange={updateScene}
           onMoveScene={moveScene}
           onRemoveScene={removeScene}
         />
@@ -357,23 +324,38 @@ function StoryEditor({
   }));
 
   return (
-    <div className="editor-shell">
-      <PanelCard className="editor-hero" tone="default">
-        <div className="section-head">
-          <div>
-            <div className="eyebrow">步骤向导</div>
-            <h2>先顺着步骤整理，再决定要不要细调流程图。</h2>
-          </div>
-          <ConfirmDialog
-            trigger={<Button variant="danger">删除作品</Button>}
-            title="移走这份本地作品？"
-            description="这会删除当前浏览器里的本地存档。已经导出的分享页和 JSON 文件不会受影响。"
-            confirmLabel="确认删除"
-            onConfirm={onDelete}
-          />
+    <div className="grid gap-[18px]">
+      <div className="flex justify-between items-center gap-4 p-3 rounded-[20px] bg-secondary border border-primary/10">
+        <div className="flex items-center gap-3 min-w-0">
+          {immersive && (
+            <button
+              type="button"
+              onClick={onExitImmersive}
+              className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-foreground transition-colors"
+              title="返回列表"
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+            </button>
+          )}
+          <h2 className="font-serif text-lg font-semibold truncate">{draft.title || "未命名故事"}</h2>
         </div>
-      </PanelCard>
-      <PanelCard className="editor-card" tone="default">
+        <AlertDialog>
+          <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
+            删除作品
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>移走这份本地作品？</AlertDialogTitle>
+              <AlertDialogDescription>这会删除当前浏览器里的本地存档。已经导出的分享页和 JSON 文件不会受影响。</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>先保留</AlertDialogCancel>
+              <AlertDialogAction onClick={onDelete}>确认删除</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+      <PanelCard tone="default">
         <WizardTabs value={step} onValueChange={(value) => setStep(value as WizardStep)} items={items} />
       </PanelCard>
     </div>
@@ -395,24 +377,40 @@ function PreviewScreen({
 
   if (!story) {
     return (
-      <div className="preview-shell">
-        <Button className="back-floating" onClick={onBack}>
+      <div className="min-h-screen p-5">
+        <Button variant="outline" className="sticky top-[18px] z-20 mb-4" onClick={onBack}>
           返回工作台
         </Button>
-        <PanelCard className="empty-state" tone="soft">
-          <h2>这份本地作品暂时不存在。</h2>
-          <p>先回去确认你要看的故事是否已经保存在本机。</p>
+        <PanelCard tone="soft" className="grid gap-3 p-[34px]">
+          <h2 className="font-serif text-2xl font-semibold">这份本地作品暂时不存在。</h2>
+          <p className="text-muted">先回去确认你要看的故事是否已经保存在本机。</p>
         </PanelCard>
       </div>
     );
   }
 
+  if (route.kind === "share") {
+    return (
+      <div className="relative">
+        <StoryPlayer story={story} shareMode />
+        <button
+          onClick={onBack}
+          className="fixed top-4 left-4 z-50 w-9 h-9 rounded-full bg-black/40 text-white/50 flex items-center justify-center text-base hover:bg-black/60 hover:text-white transition-colors backdrop-blur-sm"
+        >
+          &#x2715;
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className={`preview-shell ${route.kind === "share" ? "share-mode" : ""}`}>
-      <Button className="back-floating" onClick={onBack}>
-        返回工作台
-      </Button>
-      <StoryPlayer story={story} shareMode={route.kind === "share"} />
+    <div className="min-h-screen">
+      <div className="sticky top-0 z-20 p-4">
+        <Button variant="outline" onClick={onBack}>
+          返回工作台
+        </Button>
+      </div>
+      <StoryPlayer story={story} />
     </div>
   );
 }

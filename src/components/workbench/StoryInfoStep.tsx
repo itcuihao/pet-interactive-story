@@ -1,64 +1,47 @@
-import type { StoryDocument, StoryMedia } from "../../types";
-import type { SelectOption } from "../ui/SelectField";
-import { Button } from "../ui/Button";
-import { SelectField } from "../ui/SelectField";
+import type { StoryDocument, StoryMedia } from "@/types";
+import type { SelectOption } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { SelectField } from "@/components/ui/SelectField";
 import { MediaField } from "./MediaField";
 
-export function StoryInfoStep({
-  draft,
-  sceneOptions,
-  onBack,
-  onNext,
-  onPatchStory,
-  onSetCover,
-}: {
-  draft: StoryDocument;
-  sceneOptions: SelectOption[];
-  onBack: () => void;
-  onNext: () => void;
-  onPatchStory: (patch: Partial<StoryDocument>) => void;
-  onSetCover: (media?: StoryMedia) => void;
+export function StoryInfoStep({ draft, sceneOptions, onNext, onPatchStory, onSetCover }: {
+  draft: StoryDocument; sceneOptions: SelectOption[]; onNext: () => void;
+  onPatchStory: (patch: Partial<StoryDocument>) => void; onSetCover: (media?: StoryMedia) => void;
 }) {
   return (
-    <section className="step-panel">
-      <div className="section-head">
-        <h2>2. 故事信息</h2>
-        <div className="inline-actions">
-          <Button onClick={onBack}>上一步</Button>
-          <Button variant="primary" onClick={onNext}>
-            下一步
-          </Button>
+    <section className="grid gap-4">
+      <div className="flex justify-between items-center gap-4 p-3 rounded-[20px] bg-secondary border border-primary/10">
+        <div className="flex items-center gap-3">
+          <h2 className="font-serif text-xl font-semibold">1. 基本信息</h2>
+          {draft.templateName ? (
+            <Badge variant="secondary">{draft.templateName}</Badge>
+          ) : null}
+        </div>
+        <Button onClick={onNext}>下一步</Button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div className="grid gap-2">
+          <Label>宠物名字</Label>
+          <Input value={draft.petName} onChange={(e) => onPatchStory({ petName: e.target.value })} />
+        </div>
+        <div className="grid gap-2">
+          <Label>故事标题</Label>
+          <Input value={draft.title} onChange={(e) => onPatchStory({ title: e.target.value })} />
+        </div>
+        <div className="grid gap-2 sm:col-span-2">
+          <Label>一句话摘要</Label>
+          <Textarea value={draft.summary ?? ""} onChange={(e) => onPatchStory({ summary: e.target.value })} />
+        </div>
+        <div className="grid gap-2">
+          <Label>起始片段</Label>
+          <SelectField value={draft.startSceneId} options={sceneOptions} placeholder="选择作为开场的片段" onValueChange={(value) => onPatchStory({ startSceneId: value })} />
         </div>
       </div>
-      <div className="meta-grid">
-        <label>
-          宠物名字
-          <input value={draft.petName} onChange={(event) => onPatchStory({ petName: event.target.value })} />
-        </label>
-        <label>
-          故事标题
-          <input value={draft.title} onChange={(event) => onPatchStory({ title: event.target.value })} />
-        </label>
-        <label className="full-span">
-          一句话摘要
-          <textarea value={draft.summary ?? ""} onChange={(event) => onPatchStory({ summary: event.target.value })} />
-        </label>
-        <label>
-          起始片段
-          <SelectField
-            value={draft.startSceneId}
-            options={sceneOptions}
-            placeholder="选择作为开场的片段"
-            onValueChange={(value) => onPatchStory({ startSceneId: value })}
-          />
-        </label>
-      </div>
-      <MediaField
-        label="封面图片 / 视频链接"
-        media={draft.cover}
-        onChange={onSetCover}
-        hint="图片会跟随导出文件一起走；视频请使用可公开访问的链接。"
-      />
+      <MediaField label="封面图片 / 视频链接" media={draft.cover} onChange={onSetCover} hint="图片会跟随导出文件一起走；视频请使用可公开访问的链接。" usage="cover" />
     </section>
   );
 }
