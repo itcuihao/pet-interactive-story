@@ -164,7 +164,7 @@ function computeLayout(story: StoryDocument): Layout {
           edges.push({ from: scene.id, to: choice.nextSceneId, label: choice.label, type: "choice", x1: 0, y1: 0, x2: 0, y2: 0, mx: 0, my: 0 });
         }
       }
-    } else if (!scene.ending) {
+    } else {
       const next = getLinearNextSceneId(story, scene.id);
       if (next) {
         nexts.push(next);
@@ -220,7 +220,7 @@ function computeLayout(story: StoryDocument): Layout {
       const pos = { x: startX + i * (NODE_W + H_GAP), y: lv * (NODE_H + V_GAP) };
       posMap.set(id, pos);
       const scene = sceneMap.get(id)!;
-      nodes.push({ id, title: scene.title, ...pos, isStart: id === story.startSceneId, isEnd: !!scene.ending });
+      nodes.push({ id, title: scene.title, ...pos, isStart: id === story.startSceneId, isEnd: !getLinearNextSceneId(story, id) && (scene.choices.length === 0 || !!scene.ending) });
     });
   }
 

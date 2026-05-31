@@ -566,7 +566,7 @@ export function exportStoryAsHtml(story: StoryDocument): Blob {
           html += '</button>';
         });
         html += '</div>';
-      } else if (scene.ending) {
+      } else if (!linearNextSceneId(scene.id)) {
         html += '<button class="btn btn-primary" onclick="endStory()">看完了</button>';
       } else {
         html += '<button class="btn btn-ghost" onclick="goNext()">继续 <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>';

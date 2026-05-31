@@ -86,11 +86,6 @@ export function ScenesStep({ story, scenes, sceneOptions, onBack, onNext, onAddS
                   <Separator />
 
                   <BranchEditor story={story} scene={scene} sceneOptions={sceneOptions} onUpdateScene={onUpdateScene} />
-
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input type="checkbox" checked={!!scene.ending} onChange={(e) => onUpdateScene(scene.id, (c) => ({ ...c, ending: e.target.checked }))} className="w-auto" />
-                    <span className="text-sm text-muted-foreground">作为结尾</span>
-                  </label>
                 </CardContent>
               </Card>
             </AccordionContent>
