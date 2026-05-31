@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { SelectField } from "@/components/ui/SelectField";
 import { MediaField } from "./MediaField";
+import { FlowThumbnail } from "./FlowThumbnail";
 
 export function ScenesStep({ story, scenes, sceneOptions, onBack, onNext, onAddScene, onUpdateScene, onMoveScene, onRemoveScene }: {
   story: StoryDocument;
@@ -37,6 +38,12 @@ export function ScenesStep({ story, scenes, sceneOptions, onBack, onNext, onAddS
           <Button onClick={onNext}>下一步</Button>
         </div>
       </div>
+
+      <FlowThumbnail
+        story={story}
+        activeSceneId={openId}
+        onSceneClick={(id) => setOpenId(id)}
+      />
 
       <Accordion
         value={openId ? [openId] : []}
