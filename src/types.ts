@@ -60,3 +60,9 @@ export type StoryTemplate = {
   accent: string;
   story: Omit<StoryDocument, "id" | "updatedAt">;
 };
+
+export type SelectOption = {
+  value: string;
+  label: string;
+  description?: string;
+};
