@@ -142,6 +142,7 @@ export function App() {
           <StoriesGallery
             stories={stories}
             onSelect={handleSelectStory}
+            onPreview={(id) => pushRoute({ kind: "preview", id })}
             onCreateNew={() => setTemplatePickerOpen(true)}
             onImport={handleImport}
             onDelete={(id) => void handleDeleteStory(id)}

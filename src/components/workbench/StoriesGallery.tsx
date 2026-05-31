@@ -4,7 +4,7 @@ import type { StoryDocument, StoryMedia } from "@/types";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getMediaBlob } from "@/lib/idb";
-import { PlusIcon, UploadIcon, Trash2Icon } from "lucide-react";
+import { PlusIcon, UploadIcon, Trash2Icon, PlayIcon, PencilIcon } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -13,12 +13,14 @@ import {
 export function StoriesGallery({
   stories,
   onSelect,
+  onPreview,
   onCreateNew,
   onImport,
   onDelete,
 }: {
   stories: StoryDocument[];
   onSelect: (storyId: string) => void;
+  onPreview: (storyId: string) => void;
   onCreateNew: () => void;
   onImport: (event: ChangeEvent<HTMLInputElement>) => void;
   onDelete: (storyId: string) => void;
@@ -51,7 +53,13 @@ export function StoriesGallery({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {stories.map((story) => (
-            <StoryCard key={story.id} story={story} onClick={() => onSelect(story.id)} onDelete={() => onDelete(story.id)} />
+            <StoryCard
+              key={story.id}
+              story={story}
+              onEdit={() => onSelect(story.id)}
+              onPreview={() => onPreview(story.id)}
+              onDelete={() => onDelete(story.id)}
+            />
           ))}
         </div>
       )}
@@ -59,13 +67,13 @@ export function StoriesGallery({
   );
 }
 
-function StoryCard({ story, onClick, onDelete }: { story: StoryDocument; onClick: () => void; onDelete: () => void }) {
+function StoryCard({ story, onEdit, onPreview, onDelete }: { story: StoryDocument; onEdit: () => void; onPreview: () => void; onDelete: () => void }) {
   return (
-    <div className="group relative rounded-2xl border border-border/50 bg-card shadow-[0_14px_30px_rgba(116,86,62,0.08)] overflow-hidden hover:shadow-[0_18px_50px_rgba(104,75,54,0.14)] transition-all cursor-pointer">
-      <div className="aspect-[16/10] overflow-hidden bg-gradient-to-b from-[#f2e4d5] to-[#e6d7cb]" onClick={onClick}>
+    <div className="group relative rounded-2xl border border-border/50 bg-card shadow-[0_14px_30px_rgba(116,86,62,0.08)] overflow-hidden hover:shadow-[0_18px_50px_rgba(104,75,54,0.14)] transition-all">
+      <div className="aspect-[16/10] overflow-hidden bg-gradient-to-b from-[#f2e4d5] to-[#e6d7cb]">
         <CoverImage media={story.cover} />
       </div>
-      <div className="p-4 grid gap-1.5" onClick={onClick}>
+      <div className="p-4 grid gap-1.5">
         <strong className="text-foreground truncate">{story.title || "未命名故事"}</strong>
         <div className="flex items-center justify-between">
           <span className="text-muted text-sm">{story.petName || "未命名"}</span>
@@ -73,14 +81,31 @@ function StoryCard({ story, onClick, onDelete }: { story: StoryDocument; onClick
         </div>
         {story.summary ? <p className="text-muted-foreground text-xs line-clamp-2">{story.summary}</p> : null}
       </div>
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          className="p-1.5 rounded-lg bg-black/30 text-white/70 hover:bg-black/50 hover:text-white transition-colors backdrop-blur-sm"
+          onClick={(e) => { e.stopPropagation(); onPreview(); }}
+          title="预览"
+        >
+          <PlayIcon className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          className="p-1.5 rounded-lg bg-black/30 text-white/70 hover:bg-black/50 hover:text-white transition-colors backdrop-blur-sm"
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          title="编辑"
+        >
+          <PencilIcon className="h-3.5 w-3.5" />
+        </button>
         <AlertDialog>
           <AlertDialogTrigger
             render={
               <button
                 type="button"
-                className="p-1.5 rounded-lg bg-black/30 text-white/70 hover:bg-black/50 hover:text-white transition-colors backdrop-blur-sm"
+                className="p-1.5 rounded-lg bg-black/30 text-white/70 hover:bg-red-500/80 hover:text-white transition-colors backdrop-blur-sm"
                 onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                title="删除"
               >
                 <Trash2Icon className="h-3.5 w-3.5" />
               </button>
