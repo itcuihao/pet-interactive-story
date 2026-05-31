@@ -107,7 +107,7 @@ export function App() {
     setMessage("这份本地作品已经移走。");
     if (activeStoryId === storyId) {
       setActiveStoryId("");
-      setView("workbench");
+      if (view !== "gallery") setView("workbench");
     }
   }
 
