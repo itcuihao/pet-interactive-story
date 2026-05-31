@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { PreviewStep } from "@/components/workbench/PreviewStep";
+import { AppShell } from "@/components/workbench/AppShell";
+import { RecentStoriesList } from "@/components/workbench/RecentStoriesList";
 import { ScenesStep } from "@/components/workbench/ScenesStep";
+import { SidebarPanel } from "@/components/workbench/SidebarPanel";
 import { StoriesGallery } from "@/components/workbench/StoriesGallery";
 import { StoryInfoStep } from "@/components/workbench/StoryInfoStep";
 import { StoryPlayer } from "@/components/workbench/StoryPlayer";
 import { TemplatePicker } from "@/components/workbench/TemplatePicker";
+import { WorkspaceHeader } from "@/components/workbench/WorkspaceHeader";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { PanelCard } from "@/components/ui/PanelCard";
@@ -21,7 +25,7 @@ type Route =
   | { kind: "preview"; id: string }
   | { kind: "share"; id: string };
 
-type AppView = "gallery" | "editor";
+type AppView = "workbench" | "gallery" | "editor";
 
 type WizardStep = "story" | "scenes" | "preview";
 
@@ -51,7 +55,8 @@ export function App() {
   const [stories, setStories] = useState<StoryDocument[]>([]);
   const [activeStoryId, setActiveStoryId] = useState("");
   const [busy, setBusy] = useState(true);
-  const [view, setView] = useState<AppView>("gallery");
+  const [message, setMessage] = useState("从一个温柔模板开始。");
+  const [view, setView] = useState<AppView>("workbench");
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const templates = useMemo(() => getTemplates(), []);
 
@@ -82,7 +87,7 @@ export function App() {
     const story = normalizeStory(createStoryFromTemplate(templateId));
     await saveStory(story);
     await refreshStories(story.id);
-    setActiveStoryId(story.id);
+    setMessage(`已从「${story.templateName || "模板"}」开始记录。`);
     setTemplatePickerOpen(false);
     setView("editor");
   }
@@ -91,7 +96,7 @@ export function App() {
     const story = normalizeStory(createBlankStory());
     await saveStory(story);
     await refreshStories(story.id);
-    setActiveStoryId(story.id);
+    setMessage("已新建空白故事。");
     setTemplatePickerOpen(false);
     setView("editor");
   }
@@ -99,9 +104,10 @@ export function App() {
   async function handleDeleteStory(storyId: string) {
     await deleteStory(storyId);
     await refreshStories();
+    setMessage("这份本地作品已经移走。");
     if (activeStoryId === storyId) {
       setActiveStoryId("");
-      setView("gallery");
+      setView("workbench");
     }
   }
 
@@ -111,9 +117,13 @@ export function App() {
     const story = normalizeStory(await importStoryFromJson(file));
     await saveStory(story);
     await refreshStories(story.id);
-    setActiveStoryId(story.id);
-    setView("editor");
+    setMessage("导入成功，可以继续整理这份回忆了。");
     event.target.value = "";
+  }
+
+  function handleSelectStory(storyId: string) {
+    setActiveStoryId(storyId);
+    setView("editor");
   }
 
   // Preview / share routes
@@ -121,17 +131,22 @@ export function App() {
     return <PreviewScreen route={route} onBack={() => pushRoute({ kind: "home" })} />;
   }
 
-  // Gallery view
-  if (view === "gallery" || !activeStory) {
+  // Full-page gallery (no sidebar)
+  if (view === "gallery") {
     return (
       <>
-        <StoriesGallery
-          stories={stories}
-          onSelect={(id) => { setActiveStoryId(id); setView("editor"); }}
-          onCreateNew={() => setTemplatePickerOpen(true)}
-          onImport={handleImport}
-          onDelete={(id) => void handleDeleteStory(id)}
-        />
+        <div className="min-h-screen">
+          <div className="sticky top-0 z-20 p-4">
+            <Button variant="outline" onClick={() => setView("workbench")}>返回工作台</Button>
+          </div>
+          <StoriesGallery
+            stories={stories}
+            onSelect={handleSelectStory}
+            onCreateNew={() => setTemplatePickerOpen(true)}
+            onImport={handleImport}
+            onDelete={(id) => void handleDeleteStory(id)}
+          />
+        </div>
         <TemplatePicker
           templates={templates}
           open={templatePickerOpen}
@@ -143,34 +158,91 @@ export function App() {
     );
   }
 
-  // Editor view
+  // Immersive editor (no sidebar)
+  if (view === "editor" && activeStory) {
+    return (
+      <StoryEditor
+        key={activeStory.id}
+        story={activeStory}
+        onBack={() => setView("workbench")}
+        onChange={async (nextStory) => {
+          const normalized = normalizeStory(nextStory);
+          await saveStory(normalized);
+          await refreshStories(normalized.id);
+        }}
+        onDelete={() => void handleDeleteStory(activeStory.id)}
+        onPreview={() => pushRoute({ kind: "preview", id: activeStory.id })}
+        onSharePreview={() => pushRoute({ kind: "share", id: activeStory.id })}
+      />
+    );
+  }
+
+  // Workbench (sidebar + editor)
   return (
-    <StoryEditor
-      key={activeStory.id}
-      story={activeStory}
-      onBack={() => setView("gallery")}
-      onChange={async (nextStory) => {
-        const normalized = normalizeStory(nextStory);
-        await saveStory(normalized);
-        await refreshStories(normalized.id);
-      }}
-      onDelete={() => void handleDeleteStory(activeStory.id)}
-      onPreview={() => pushRoute({ kind: "preview", id: activeStory.id })}
-      onSharePreview={() => pushRoute({ kind: "share", id: activeStory.id })}
-    />
+    <AppShell
+      sidebar={
+        <>
+          <SidebarPanel hero>
+            <h1 className="font-serif text-[clamp(28px,3vw,42px)] font-semibold leading-[1.08] tracking-tight">宠爱时光</h1>
+            <p className="text-muted leading-relaxed text-sm">从点滴片段开始，慢慢整理成你们的宠爱时光。</p>
+            <TemplatePicker
+              templates={templates}
+              open={templatePickerOpen}
+              onOpenChange={setTemplatePickerOpen}
+              onCreateBlank={() => void handleCreateBlank()}
+              onCreateFromTemplate={(id) => void handleCreateFromTemplate(id)}
+            />
+          </SidebarPanel>
+          <SidebarPanel>
+            <RecentStoriesList
+              busy={busy}
+              stories={stories}
+              activeStoryId={activeStory?.id}
+              onSelect={handleSelectStory}
+              onImport={handleImport}
+              onOpenGallery={() => setView("gallery")}
+            />
+          </SidebarPanel>
+        </>
+      }
+      header={<WorkspaceHeader message={message} />}
+    >
+      {activeStory ? (
+        <StoryEditorInline
+          key={activeStory.id}
+          story={activeStory}
+          onChange={async (nextStory) => {
+            const normalized = normalizeStory(nextStory);
+            await saveStory(normalized);
+            await refreshStories(normalized.id);
+            setMessage(`已保存《${normalized.title}》`);
+          }}
+          onDelete={() => void handleDeleteStory(activeStory.id)}
+          onPreview={() => pushRoute({ kind: "preview", id: activeStory.id })}
+          onSharePreview={() => pushRoute({ kind: "share", id: activeStory.id })}
+        />
+      ) : (
+        <PanelCard tone="soft" className="grid gap-3 p-[34px]">
+          <h2 className="font-serif text-2xl font-semibold">先选一个模板，再慢慢把今天放进去。</h2>
+          <p className="text-muted">别急着先想复杂分支。先把片段写下来，后面的互动自然就会清楚。</p>
+        </PanelCard>
+      )}
+    </AppShell>
   );
 }
 
-function StoryEditor({
+/**
+ * Editor rendered inside the workbench (sidebar visible).
+ * Shares the same logic as the immersive StoryEditor but without the sticky back button header.
+ */
+function StoryEditorInline({
   story,
-  onBack,
   onChange,
   onDelete,
   onPreview,
   onSharePreview,
 }: {
   story: StoryDocument;
-  onBack: () => void;
   onChange: (story: StoryDocument) => Promise<void>;
   onDelete: () => void;
   onPreview: () => void;
@@ -191,11 +263,7 @@ function StoryEditor({
   }
 
   function patchStory(patch: Partial<StoryDocument>) {
-    void update({
-      ...draft,
-      ...patch,
-      updatedAt: new Date().toISOString(),
-    });
+    void update({ ...draft, ...patch, updatedAt: new Date().toISOString() });
   }
 
   function updateScene(sceneId: string, updater: (scene: StoryScene) => StoryScene) {
@@ -208,11 +276,7 @@ function StoryEditor({
 
   function addScene() {
     const scene = createScene();
-    void update({
-      ...draft,
-      scenes: [...draft.scenes, scene],
-      updatedAt: new Date().toISOString(),
-    });
+    void update({ ...draft, scenes: [...draft.scenes, scene], updatedAt: new Date().toISOString() });
   }
 
   function removeScene(sceneId: string) {
@@ -223,13 +287,7 @@ function StoryEditor({
       ...scene,
       choices: scene.choices.filter((choice) => choice.nextSceneId !== sceneId),
     }));
-
-    void update({
-      ...draft,
-      scenes: repairedScenes,
-      startSceneId: nextSceneId,
-      updatedAt: new Date().toISOString(),
-    });
+    void update({ ...draft, scenes: repairedScenes, startSceneId: nextSceneId, updatedAt: new Date().toISOString() });
   }
 
   function moveScene(sceneId: string, direction: -1 | 1) {
@@ -272,35 +330,144 @@ function StoryEditor({
     ...item,
     content:
       item.id === "story" ? (
-        <StoryInfoStep
-          draft={draft}
-          sceneOptions={sceneOptions}
-          onNext={goNextStep}
-          onPatchStory={patchStory}
-          onSetCover={setCover}
-        />
+        <StoryInfoStep draft={draft} sceneOptions={sceneOptions} onNext={goNextStep} onPatchStory={patchStory} onSetCover={setCover} />
       ) : item.id === "scenes" ? (
-        <ScenesStep
-          story={draft}
-          scenes={draft.scenes}
-          sceneOptions={sceneOptions}
-          onBack={goPrevStep}
-          onNext={goNextStep}
-          onAddScene={addScene}
-          onUpdateScene={updateScene}
-          onMoveScene={moveScene}
-          onRemoveScene={removeScene}
-        />
+        <ScenesStep story={draft} scenes={draft.scenes} sceneOptions={sceneOptions} onBack={goPrevStep} onNext={goNextStep} onAddScene={addScene} onUpdateScene={updateScene} onMoveScene={moveScene} onRemoveScene={removeScene} />
       ) : (
-        <PreviewStep
-          draft={draft}
-          onBack={goPrevStep}
-          onPreview={onPreview}
-          onSharePreview={onSharePreview}
-          onExportJson={() => downloadStoryAsJson(draft)}
-          onExportHtml={handleExportHtml}
-          exportIssues={exportIssues}
-        />
+        <PreviewStep draft={draft} onBack={goPrevStep} onPreview={onPreview} onSharePreview={onSharePreview} onExportJson={() => downloadStoryAsJson(draft)} onExportHtml={handleExportHtml} exportIssues={exportIssues} />
+      ),
+  }));
+
+  return (
+    <div className="grid gap-[18px]">
+      <div className="flex justify-between items-center gap-4 p-3 rounded-[20px] bg-secondary border border-primary/10">
+        <h2 className="font-serif text-lg font-semibold truncate">{draft.title || "未命名故事"}</h2>
+        <AlertDialog>
+          <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>删除作品</AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>移走这份本地作品？</AlertDialogTitle>
+              <AlertDialogDescription>这会删除当前浏览器里的本地存档。已经导出的分享页和 JSON 文件不会受影响。</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>先保留</AlertDialogCancel>
+              <AlertDialogAction onClick={onDelete}>确认删除</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+      <PanelCard tone="default">
+        <WizardTabs value={step} onValueChange={(value) => setStep(value as WizardStep)} items={items} />
+      </PanelCard>
+    </div>
+  );
+}
+
+/**
+ * Full-screen immersive editor (no sidebar).
+ */
+function StoryEditor({
+  story,
+  onBack,
+  onChange,
+  onDelete,
+  onPreview,
+  onSharePreview,
+}: {
+  story: StoryDocument;
+  onBack: () => void;
+  onChange: (story: StoryDocument) => Promise<void>;
+  onDelete: () => void;
+  onPreview: () => void;
+  onSharePreview: () => void;
+}) {
+  const [draft, setDraft] = useState(story);
+  const [step, setStep] = useState<WizardStep>("story");
+  const [exportIssues, setExportIssues] = useState<ReturnType<typeof validateStoryForExport>["issues"]>([]);
+
+  useEffect(() => {
+    setDraft(story);
+    setExportIssues([]);
+  }, [story]);
+
+  async function update(next: StoryDocument) {
+    setDraft(next);
+    await onChange(next);
+  }
+
+  function patchStory(patch: Partial<StoryDocument>) {
+    void update({ ...draft, ...patch, updatedAt: new Date().toISOString() });
+  }
+
+  function updateScene(sceneId: string, updater: (scene: StoryScene) => StoryScene) {
+    void update({
+      ...draft,
+      scenes: draft.scenes.map((scene) => (scene.id === sceneId ? updater(scene) : scene)),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  function addScene() {
+    const scene = createScene();
+    void update({ ...draft, scenes: [...draft.scenes, scene], updatedAt: new Date().toISOString() });
+  }
+
+  function removeScene(sceneId: string) {
+    if (draft.scenes.length <= 1) return;
+    const scenes = draft.scenes.filter((scene) => scene.id !== sceneId);
+    const nextSceneId = draft.startSceneId === sceneId ? scenes[0].id : draft.startSceneId;
+    const repairedScenes = scenes.map((scene) => ({
+      ...scene,
+      choices: scene.choices.filter((choice) => choice.nextSceneId !== sceneId),
+    }));
+    void update({ ...draft, scenes: repairedScenes, startSceneId: nextSceneId, updatedAt: new Date().toISOString() });
+  }
+
+  function moveScene(sceneId: string, direction: -1 | 1) {
+    const index = draft.scenes.findIndex((scene) => scene.id === sceneId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= draft.scenes.length) return;
+    const scenes = [...draft.scenes];
+    [scenes[index], scenes[target]] = [scenes[target], scenes[index]];
+    void update({ ...draft, scenes, updatedAt: new Date().toISOString() });
+  }
+
+  function setCover(media?: StoryMedia) {
+    void update({ ...draft, cover: media, updatedAt: new Date().toISOString() });
+  }
+
+  function handleExportHtml() {
+    const result = validateStoryForExport(draft);
+    setExportIssues(result.issues);
+    if (!result.ok) return;
+    downloadStoryAsHtml(draft);
+  }
+
+  function goPrevStep() {
+    const index = STEP_LABELS.findIndex((item) => item.id === step);
+    if (index > 0) setStep(STEP_LABELS[index - 1].id);
+  }
+
+  function goNextStep() {
+    const index = STEP_LABELS.findIndex((item) => item.id === step);
+    if (index < STEP_LABELS.length - 1) setStep(STEP_LABELS[index + 1].id);
+  }
+
+  const sceneOptions: SelectOption[] = draft.scenes.map((scene) => ({
+    value: scene.id,
+    label: scene.title || "未命名片段",
+    description: scene.background || undefined,
+  }));
+
+  const items = STEP_LABELS.map((item) => ({
+    ...item,
+    content:
+      item.id === "story" ? (
+        <StoryInfoStep draft={draft} sceneOptions={sceneOptions} onNext={goNextStep} onPatchStory={patchStory} onSetCover={setCover} />
+      ) : item.id === "scenes" ? (
+        <ScenesStep story={draft} scenes={draft.scenes} sceneOptions={sceneOptions} onBack={goPrevStep} onNext={goNextStep} onAddScene={addScene} onUpdateScene={updateScene} onMoveScene={moveScene} onRemoveScene={removeScene} />
+      ) : (
+        <PreviewStep draft={draft} onBack={goPrevStep} onPreview={onPreview} onSharePreview={onSharePreview} onExportJson={() => downloadStoryAsJson(draft)} onExportHtml={handleExportHtml} exportIssues={exportIssues} />
       ),
   }));
 
@@ -320,9 +487,7 @@ function StoryEditor({
             <h2 className="font-serif text-lg font-semibold truncate">{draft.title || "未命名故事"}</h2>
           </div>
           <AlertDialog>
-            <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
-              删除作品
-            </AlertDialogTrigger>
+            <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>删除作品</AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>移走这份本地作品？</AlertDialogTitle>
