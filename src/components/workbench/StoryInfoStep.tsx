@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { SelectField } from "@/components/ui/SelectField";
+import { AiButton } from "@/components/ui/AiButton";
+import { polishTitle, polishSummary } from "@/lib/ai";
 import { MediaField } from "./MediaField";
 
 export function StoryInfoStep({ draft, sceneOptions, onNext, onPatchStory, onSetCover }: {
@@ -29,11 +31,17 @@ export function StoryInfoStep({ draft, sceneOptions, onNext, onPatchStory, onSet
           <Input value={draft.petName} onChange={(e) => onPatchStory({ petName: e.target.value })} />
         </div>
         <div className="grid gap-2">
-          <Label>故事标题</Label>
+          <div className="flex justify-between items-center">
+            <Label>故事标题</Label>
+            <AiButton label="标题" onApply={async () => { const r = await polishTitle(draft.petName, draft.title); onPatchStory({ title: r }); return r; }} />
+          </div>
           <Input value={draft.title} onChange={(e) => onPatchStory({ title: e.target.value })} />
         </div>
         <div className="grid gap-2 sm:col-span-2">
-          <Label>一句话摘要</Label>
+          <div className="flex justify-between items-center">
+            <Label>一句话摘要</Label>
+            <AiButton label="摘要" onApply={async () => { const r = await polishSummary(draft.petName, draft.title, draft.summary ?? ""); onPatchStory({ summary: r }); return r; }} />
+          </div>
           <Textarea value={draft.summary ?? ""} onChange={(e) => onPatchStory({ summary: e.target.value })} />
         </div>
         <div className="grid gap-2">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { StoryChoice, StoryDocument, StoryScene } from "@/types";
 import type { SelectOption } from "@/types";
 import { getLinearNextSceneId } from "@/lib/player";
+import { polishSceneTitle, polishSceneText } from "@/lib/ai";
 import { Button } from "@/components/ui/button";
 import { ChevronUpIcon, ChevronDownIcon, XIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { SelectField } from "@/components/ui/SelectField";
+import { AiButton } from "@/components/ui/AiButton";
 import { MediaField } from "./MediaField";
 import { FlowThumbnail } from "./FlowThumbnail";
 
@@ -69,7 +71,10 @@ export function ScenesStep({ story, scenes, sceneOptions, onBack, onNext, onAddS
                 <CardContent className="grid gap-4 p-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div className="grid gap-2">
-                      <Label>标题</Label>
+                      <div className="flex justify-between items-center">
+                        <Label>标题</Label>
+                        <AiButton label="片段标题" onApply={async () => { const r = await polishSceneTitle(story.title, scene.title, scene.text); onUpdateScene(scene.id, (c) => ({ ...c, title: r })); return r; }} />
+                      </div>
                       <Input value={scene.title} onChange={(e) => onUpdateScene(scene.id, (c) => ({ ...c, title: e.target.value }))} />
                     </div>
                     <div className="grid gap-2">
@@ -78,7 +83,10 @@ export function ScenesStep({ story, scenes, sceneOptions, onBack, onNext, onAddS
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label>文案</Label>
+                    <div className="flex justify-between items-center">
+                      <Label>文案</Label>
+                      <AiButton label="片段文案" onApply={async () => { const r = await polishSceneText(story.title, scene.title, scene.text); onUpdateScene(scene.id, (c) => ({ ...c, text: r })); return r; }} />
+                    </div>
                     <Textarea value={scene.text} onChange={(e) => onUpdateScene(scene.id, (c) => ({ ...c, text: e.target.value }))} />
                   </div>
                   <MediaField label="片段媒体" media={scene.media} onChange={(media) => onUpdateScene(scene.id, (c) => ({ ...c, media }))} hint="图片或视频，让片段更生动。" usage="scene" />
