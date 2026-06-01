@@ -33,14 +33,14 @@ export function StoryInfoStep({ draft, sceneOptions, onNext, onPatchStory, onSet
         <div className="grid gap-2">
           <div className="flex justify-between items-center">
             <Label>故事标题</Label>
-            <AiButton label="标题" onApply={async () => { const r = await polishTitle(draft.petName, draft.title); onPatchStory({ title: r }); return r; }} />
+            <AiButton label="标题" fetchOptions={() => polishTitle(draft.petName, draft.title)} onSelect={(r) => onPatchStory({ title: r })} />
           </div>
           <Input value={draft.title} onChange={(e) => onPatchStory({ title: e.target.value })} />
         </div>
         <div className="grid gap-2 sm:col-span-2">
           <div className="flex justify-between items-center">
             <Label>一句话摘要</Label>
-            <AiButton label="摘要" onApply={async () => { const r = await polishSummary(draft.petName, draft.title, draft.summary ?? ""); onPatchStory({ summary: r }); return r; }} />
+            <AiButton label="摘要" fetchOptions={() => polishSummary(draft.petName, draft.title, draft.summary ?? "")} onSelect={(r) => onPatchStory({ summary: r })} />
           </div>
           <Textarea value={draft.summary ?? ""} onChange={(e) => onPatchStory({ summary: e.target.value })} />
         </div>

@@ -7,7 +7,7 @@ const AI_API_KEY_KEY = "pet-memory-ai-api-key";
 export const AI_PRESETS = [
   { name: "DeepSeek", baseUrl: "https://api.deepseek.com", model: "deepseek-chat" },
   { name: "GLM", baseUrl: "https://open.bigmodel.cn/api/paas", model: "glm-4-flash" },
-  { name: "MiniMax", baseUrl: "https://api.minimaxi.com", model: "MiniMax-M2.7" },
+  { name: "MiniMax", baseUrl: "https://api.minimaxi.com", model: "MiniMax-M2.7-highspeed" },
 ];
 
 export function getAiBaseUrl(): string {
@@ -71,37 +71,53 @@ async function chat(systemPrompt: string, userPrompt: string): Promise<string> {
   const data = await res.json();
   const content = data?.choices?.[0]?.message?.content;
   if (!content) throw new Error("AI 返回了空内容");
-  return content.trim();
+  // MiniMax 等模型在 content 中夹带 <think reasoning> 标签，需剥离
+  return content.replace(/<think\b[^>]*>[\s\S]*?<\/think>/g, "").trim();
+}
+
+/* ── Helpers ─────────────────────────── */
+
+function parseStringArray(raw: string): string[] {
+  const clean = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+  try {
+    const parsed = JSON.parse(clean);
+    if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+  } catch { /* fall through */ }
+  return raw.split("\n").map((l) => l.replace(/^\d+[.、)\]]\s*/, "").trim()).filter(Boolean);
 }
 
 /* ── Public API ─────────────────────────── */
 
-export async function polishTitle(petName: string, current: string): Promise<string> {
-  return chat(
-    "你是一个温柔的宠物故事标题创作者。根据用户给出的宠物名和原标题，生成一个更温暖、更有画面感的标题。只输出标题本身，不要加引号或解释。标题不超过15个字。",
+export async function polishTitle(petName: string, current: string): Promise<string[]> {
+  const raw = await chat(
+    "你是一个温柔的宠物故事标题创作者。根据用户给出的宠物名和原标题，生成3个不同风格的标题候选，各有画面感。输出纯 JSON 字符串数组，不要 markdown 代码块，不要解释。每个标题不超过15个字。示例：[\"标题一\",\"标题二\",\"标题三\"]",
     `宠物名：${petName}\n原标题：${current || "（无）"}`,
   );
+  return parseStringArray(raw);
 }
 
-export async function polishSummary(petName: string, title: string, current: string): Promise<string> {
-  return chat(
-    "你是一个温暖的宠物故事作者。根据宠物名、标题和现有摘要，写一句更生动的一句话摘要。只输出摘要本身，不要加引号或解释。摘要不超过40个字。",
+export async function polishSummary(petName: string, title: string, current: string): Promise<string[]> {
+  const raw = await chat(
+    "你是一个温暖的宠物故事作者。根据宠物名、标题和现有摘要，生成3个不同风格的一句话摘要候选。输出纯 JSON 字符串数组，不要 markdown 代码块，不要解释。每个摘要不超过40个字。",
     `宠物名：${petName}\n标题：${title}\n现有摘要：${current || "（无）"}`,
   );
+  return parseStringArray(raw);
 }
 
-export async function polishSceneTitle(storyTitle: string, current: string, sceneText: string): Promise<string> {
-  return chat(
-    "你是一个宠物故事编辑。根据故事标题和片段内容，给这个片段起一个简短有画面感的标题。只输出标题，不超过8个字。",
+export async function polishSceneTitle(storyTitle: string, current: string, sceneText: string): Promise<string[]> {
+  const raw = await chat(
+    "你是一个宠物故事编辑。根据故事标题和片段内容，给这个片段起3个简短有画面感的标题候选。输出纯 JSON 字符串数组，不要 markdown 代码块，不要解释。每个标题不超过8个字。",
     `故事标题：${storyTitle}\n片段内容：${sceneText.slice(0, 200)}\n当前标题：${current || "（无）"}`,
   );
+  return parseStringArray(raw);
 }
 
-export async function polishSceneText(storyTitle: string, sceneTitle: string, current: string): Promise<string> {
-  return chat(
-    "你是一个温暖的宠物故事作者。润色这个片段的文案，让语言更生动、更有画面感，适合配合图片阅读。保留原始情感和关键信息，不要改变故事走向。只输出润色后的文案。",
+export async function polishSceneText(storyTitle: string, sceneTitle: string, current: string): Promise<string[]> {
+  const raw = await chat(
+    "你是一个温暖的宠物故事作者。润色这个片段的文案，生成3个不同风格的版本，让语言更生动、更有画面感，适合配合图片阅读。保留原始情感和关键信息，不要改变故事走向。输出纯 JSON 字符串数组，不要 markdown 代码块，不要解释。每个版本30-80字。",
     `故事标题：${storyTitle}\n片段标题：${sceneTitle}\n当前文案：${current}`,
   );
+  return parseStringArray(raw);
 }
 
 export async function generateStoryFromIdea(idea: string): Promise<{ title: string; summary: string; petName: string; scenes: Array<{ title: string; text: string }> }> {

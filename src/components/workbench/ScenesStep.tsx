@@ -73,7 +73,7 @@ export function ScenesStep({ story, scenes, sceneOptions, onBack, onNext, onAddS
                     <div className="grid gap-2">
                       <div className="flex justify-between items-center">
                         <Label>标题</Label>
-                        <AiButton label="片段标题" onApply={async () => { const r = await polishSceneTitle(story.title, scene.title, scene.text); onUpdateScene(scene.id, (c) => ({ ...c, title: r })); return r; }} />
+                        <AiButton label="片段标题" fetchOptions={() => polishSceneTitle(story.title, scene.title, scene.text)} onSelect={(r) => onUpdateScene(scene.id, (c) => ({ ...c, title: r }))} />
                       </div>
                       <Input value={scene.title} onChange={(e) => onUpdateScene(scene.id, (c) => ({ ...c, title: e.target.value }))} />
                     </div>
@@ -85,7 +85,7 @@ export function ScenesStep({ story, scenes, sceneOptions, onBack, onNext, onAddS
                   <div className="grid gap-2">
                     <div className="flex justify-between items-center">
                       <Label>文案</Label>
-                      <AiButton label="片段文案" onApply={async () => { const r = await polishSceneText(story.title, scene.title, scene.text); onUpdateScene(scene.id, (c) => ({ ...c, text: r })); return r; }} />
+                      <AiButton label="片段文案" fetchOptions={() => polishSceneText(story.title, scene.title, scene.text)} onSelect={(r) => onUpdateScene(scene.id, (c) => ({ ...c, text: r }))} />
                     </div>
                     <Textarea value={scene.text} onChange={(e) => onUpdateScene(scene.id, (c) => ({ ...c, text: e.target.value }))} />
                   </div>
