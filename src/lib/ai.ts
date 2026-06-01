@@ -7,7 +7,7 @@ const AI_API_KEY_KEY = "pet-memory-ai-api-key";
 export const AI_PRESETS = [
   { name: "DeepSeek", baseUrl: "https://api.deepseek.com", model: "deepseek-chat" },
   { name: "GLM", baseUrl: "https://open.bigmodel.cn/api/paas", model: "glm-4-flash" },
-  { name: "MiniMax", baseUrl: "https://api.minimax.chat", model: "MiniMax-Text-01" },
+  { name: "MiniMax", baseUrl: "https://api.minimaxi.com", model: "MiniMax-M3" },
 ];
 
 export function getAiBaseUrl(): string {
