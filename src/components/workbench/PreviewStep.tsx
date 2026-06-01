@@ -5,36 +5,37 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-export function PreviewStep({ draft, onBack, onPreview, onSharePreview, onExportJson, onExportHtml, exportIssues }: {
+export function PreviewStep({ draft, onBack, onPreview, onSharePreview, onExportJson, onExportHtml, onDone, exportIssues }: {
   draft: StoryDocument; onBack: () => void; onPreview: () => void; onSharePreview: () => void;
-  onExportJson: () => void; onExportHtml: () => void; exportIssues: ExportValidationIssue[];
+  onExportJson: () => void; onExportHtml: () => void; onDone: () => void; exportIssues: ExportValidationIssue[];
 }) {
   return (
     <section className="grid gap-4">
       <div className="flex justify-between items-center gap-4 p-3 rounded-[20px] bg-secondary border border-primary/10">
         <h2 className="font-serif text-xl font-semibold">3. 分享导出</h2>
-        <Button variant="outline" onClick={onBack}>上一步</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={onBack}>上一步</Button>
+          <Button onClick={onDone}>完成</Button>
+        </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>预览故事</CardTitle>
+          <CardTitle>预览</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3">
-          <p className="text-sm text-muted-foreground">在新页面中预览完整的故事效果。</p>
+          <p className="text-sm text-muted-foreground">故事已自动保存。点击下方按钮预览效果。</p>
           <div className="flex flex-wrap gap-3">
-            <Button variant="outline" onClick={onPreview}>工作台预览</Button>
-            <Button variant="outline" onClick={onSharePreview}>单页分享预览</Button>
+            <Button onClick={onPreview}>全屏预览</Button>
+            <Button variant="outline" onClick={onSharePreview}>分享页预览</Button>
           </div>
         </CardContent>
       </Card>
 
-      <Separator />
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            导出文件
+            导出
             {exportIssues.length ? <Badge variant="destructive">{exportIssues.length} 个问题</Badge> : null}
           </CardTitle>
         </CardHeader>

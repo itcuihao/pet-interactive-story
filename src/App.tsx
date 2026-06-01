@@ -164,6 +164,7 @@ export function App() {
         onDelete={() => void handleDeleteStory(activeStory.id)}
         onPreview={() => pushRoute({ kind: "preview", id: activeStory.id })}
         onSharePreview={() => pushRoute({ kind: "share", id: activeStory.id })}
+        onDone={() => setView("workbench")}
         immersive
       />
     );
@@ -216,6 +217,7 @@ export function App() {
           onDelete={() => void handleDeleteStory(activeStory.id)}
           onPreview={() => pushRoute({ kind: "preview", id: activeStory.id })}
           onSharePreview={() => pushRoute({ kind: "share", id: activeStory.id })}
+          onDone={() => setActiveStoryId("")}
         />
       ) : (
         <PanelCard tone="soft" className="grid gap-3 p-[34px]">
@@ -235,6 +237,7 @@ function StoryEditor({
   onDelete,
   onPreview,
   onSharePreview,
+  onDone,
   immersive,
 }: {
   story: StoryDocument;
@@ -243,9 +246,10 @@ function StoryEditor({
   onDelete: () => void;
   onPreview: () => void;
   onSharePreview: () => void;
+  onDone: () => void;
   immersive?: boolean;
 }) {
-  const { draft, step, setStep, items } = useStoryEditor(story, onChange, onPreview, onSharePreview);
+  const { draft, step, setStep, items } = useStoryEditor(story, onChange, onPreview, onSharePreview, onDone);
 
   const headerBar = (
     <div className="flex justify-between items-center gap-4 p-3 rounded-[20px] bg-secondary/90 border border-primary/10 backdrop-blur-xl">

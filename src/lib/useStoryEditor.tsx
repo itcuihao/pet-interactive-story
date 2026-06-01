@@ -19,6 +19,7 @@ export function useStoryEditor(
   onChange: (story: StoryDocument) => Promise<void>,
   onPreview: () => void,
   onSharePreview: () => void,
+  onDone: () => void,
 ) {
   const [draft, setDraft] = useState(story);
   const [step, setStep] = useState<WizardStep>("story");
@@ -106,7 +107,7 @@ export function useStoryEditor(
       ) : item.id === "scenes" ? (
         <ScenesStep story={draft} scenes={draft.scenes} sceneOptions={sceneOptions} onBack={goPrevStep} onNext={goNextStep} onAddScene={addScene} onUpdateScene={updateScene} onMoveScene={moveScene} onRemoveScene={removeScene} />
       ) : (
-        <PreviewStep draft={draft} onBack={goPrevStep} onPreview={onPreview} onSharePreview={onSharePreview} onExportJson={() => downloadStoryAsJson(draft)} onExportHtml={handleExportHtml} exportIssues={exportIssues} />
+        <PreviewStep draft={draft} onBack={goPrevStep} onPreview={onPreview} onSharePreview={onSharePreview} onExportJson={() => downloadStoryAsJson(draft)} onExportHtml={handleExportHtml} onDone={onDone} exportIssues={exportIssues} />
       ),
   }));
 
