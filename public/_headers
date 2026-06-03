@@ -1,5 +1,7 @@
+# Force correct MIME types for static assets on Cloudflare Pages
 /assets/*.js
   Content-Type: application/javascript
 
 /assets/*.css
   Content-Type: text/css
+
