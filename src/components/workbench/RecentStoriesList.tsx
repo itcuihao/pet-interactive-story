@@ -3,9 +3,27 @@ import type { StoryDocument } from "@/types";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Grid3X3Icon } from "lucide-react";
+import { Grid3X3Icon, PlayIcon, Share2 } from "lucide-react";
 
-export function RecentStoriesList({ busy, stories, activeStoryId, onSelect, onImport, onOpenGallery }: { busy: boolean; stories: StoryDocument[]; activeStoryId?: string; onSelect: (storyId: string) => void; onImport: (event: ChangeEvent<HTMLInputElement>) => void; onOpenGallery: () => void }) {
+export function RecentStoriesList({
+  busy,
+  stories,
+  activeStoryId,
+  onSelect,
+  onPreview,
+  onShare,
+  onImport,
+  onOpenGallery,
+}: {
+  busy: boolean;
+  stories: StoryDocument[];
+  activeStoryId?: string;
+  onSelect: (storyId: string) => void;
+  onPreview: (storyId: string) => void;
+  onShare: (story: StoryDocument) => void;
+  onImport: (event: ChangeEvent<HTMLInputElement>) => void;
+  onOpenGallery: () => void;
+}) {
   return (
     <>
       <div className="flex justify-between items-start gap-4">
@@ -26,14 +44,51 @@ export function RecentStoriesList({ busy, stories, activeStoryId, onSelect, onIm
         <ScrollArea className="h-[min(320px,44vh)]">
           <div className="grid gap-2.5 pr-1.5">
             {stories.map((story) => (
-              <button
+              <div
                 key={story.id}
-                className={`text-left rounded-xl border p-3 grid gap-0.5 transition-colors ${story.id === activeStoryId ? "border-primary/34 bg-gradient-to-b from-white/98 to-orange-50/96" : "border-transparent bg-white/88 hover:border-primary/24"}`}
-                onClick={() => onSelect(story.id)}
+                className={cn(
+                  "group flex items-center justify-between rounded-xl border p-3 gap-2 transition-colors",
+                  story.id === activeStoryId
+                    ? "border-primary/34 bg-gradient-to-b from-white/98 to-orange-50/96"
+                    : "border-transparent bg-white/88 hover:border-primary/24 hover:bg-white"
+                )}
               >
-                <strong className="text-foreground text-sm">{story.title || "未命名故事"}</strong>
-                <span className="text-muted text-xs">{story.petName}</span>
-              </button>
+                <button
+                  type="button"
+                  className="flex-1 text-left grid gap-0.5 min-w-0"
+                  onClick={() => onSelect(story.id)}
+                  title="编辑设计"
+                >
+                  <strong className="text-foreground text-sm truncate">{story.title || "未命名故事"}</strong>
+                  <span className="text-muted text-xs">{story.petName}</span>
+                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 opacity-60 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShare(story);
+                    }}
+                    title="分享故事"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 opacity-60 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPreview(story.id);
+                    }}
+                    title="播放预览"
+                  >
+                    <PlayIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         </ScrollArea>

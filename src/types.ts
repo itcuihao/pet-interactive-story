@@ -39,9 +39,20 @@ export type StoryScene = {
   layout?: "moment" | "choice-gate";
 };
 
+export interface PetProfile {
+  id: string;
+  name: string;
+  species: "cat" | "dog" | "other";
+  breed: string;
+  gender: "boy" | "girl";
+  ageText: string;
+  personality?: string;
+}
+
 export type StoryDocument = {
   id: string;
   title: string;
+  petId?: string;
   petName: string;
   summary?: string;
   cover?: StoryMedia;

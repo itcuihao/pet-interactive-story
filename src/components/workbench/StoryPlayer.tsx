@@ -4,11 +4,32 @@ import { getLinearNextSceneId, type StoryDecisionMap } from "@/lib/player";
 import { getMediaBlob } from "@/lib/idb";
 import type { StoryDocument, StoryMedia } from "@/types";
 
-export function StoryPlayer({ story }: { story: StoryDocument; shareMode?: boolean }) {
+export function StoryPlayer({
+  story,
+  shareMode,
+  onSceneChange,
+  seekSceneId,
+}: {
+  story: StoryDocument;
+  shareMode?: boolean;
+  onSceneChange?: (sceneId: string, phase: "cover" | "playing" | "ended") => void;
+  seekSceneId?: string | null;
+}) {
   const [phase, setPhase] = useState<"cover" | "playing" | "ended">("cover");
   const [currentSceneId, setCurrentSceneId] = useState(story.startSceneId);
   const [decisions, setDecisions] = useState<StoryDecisionMap>({});
   const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    onSceneChange?.(currentSceneId, phase);
+  }, [currentSceneId, phase, onSceneChange]);
+
+  useEffect(() => {
+    if (seekSceneId) {
+      setPhase("playing");
+      setCurrentSceneId(seekSceneId);
+    }
+  }, [seekSceneId]);
 
   useEffect(() => {
     setPhase("cover");
@@ -57,7 +78,7 @@ export function StoryPlayer({ story }: { story: StoryDocument; shareMode?: boole
   // ── Cover ──────────────────────────────────────────
   if (phase === "cover") {
     return (
-      <div className="relative w-full min-h-svh flex items-center justify-center bg-gradient-to-b from-neutral-900 to-black overflow-hidden">
+      <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-b from-neutral-900 to-black overflow-hidden">
         {story.cover?.type === "image" && (
           <>
             <img
@@ -101,7 +122,7 @@ export function StoryPlayer({ story }: { story: StoryDocument; shareMode?: boole
   // ── Ended ──────────────────────────────────────────
   if (phase === "ended") {
     return (
-      <div className="relative w-full min-h-svh flex items-center justify-center bg-gradient-to-b from-neutral-900 to-black">
+      <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-b from-neutral-900 to-black">
         <div
           className={`text-center px-8 py-12 max-w-sm transition-all duration-300 ease-out ${
             visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
@@ -127,7 +148,7 @@ export function StoryPlayer({ story }: { story: StoryDocument; shareMode?: boole
 
   // ── Playing ────────────────────────────────────────
   return (
-    <div className="relative w-full min-h-svh bg-black flex flex-col overflow-hidden">
+    <div className="relative w-full h-full bg-black flex flex-col overflow-hidden">
       {/* Media area */}
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <SceneMedia media={currentScene?.media} />

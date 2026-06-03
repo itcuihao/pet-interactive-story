@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Share2 } from "lucide-react";
 
-export function PreviewStep({ draft, onBack, onPreview, onSharePreview, onExportJson, onExportHtml, onDone, exportIssues }: {
+export function PreviewStep({ draft, onBack, onPreview, onSharePreview, onShare, onExportJson, onExportHtml, onDone, exportIssues }: {
   draft: StoryDocument; onBack: () => void; onPreview: () => void; onSharePreview: () => void;
-  onExportJson: () => void; onExportHtml: () => void; onDone: () => void; exportIssues: ExportValidationIssue[];
+  onShare: () => void; onExportJson: () => void; onExportHtml: () => void; onDone: () => void; exportIssues: ExportValidationIssue[];
 }) {
   return (
     <section className="grid gap-4">
@@ -21,13 +22,17 @@ export function PreviewStep({ draft, onBack, onPreview, onSharePreview, onExport
 
       <Card>
         <CardHeader>
-          <CardTitle>预览</CardTitle>
+          <CardTitle>预览与分享</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3">
-          <p className="text-sm text-muted-foreground">故事已自动保存。点击下方按钮预览效果。</p>
+          <p className="text-sm text-muted-foreground">故事已自动保存。点击下方按钮预览效果或直接生成分享链接。</p>
           <div className="flex flex-wrap gap-3">
             <Button onClick={onPreview}>全屏预览</Button>
             <Button variant="outline" onClick={onSharePreview}>分享页预览</Button>
+            <Button variant="default" onClick={onShare} className="flex items-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90">
+              <Share2 className="h-4 w-4" />
+              生成分享链接
+            </Button>
           </div>
         </CardContent>
       </Card>

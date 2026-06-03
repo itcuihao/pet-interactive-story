@@ -23,7 +23,7 @@ export function FlowThumbnail({
 }) {
   const layout = useMemo(() => computeLayout(story), [story]);
 
-  if (layout.nodes.length < 2) return null;
+  if (layout.nodes.length < 1) return null;
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-border/50 bg-warm-surface p-3">

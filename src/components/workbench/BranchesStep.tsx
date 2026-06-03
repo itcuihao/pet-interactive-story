@@ -7,6 +7,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { SelectField } from "@/components/ui/SelectField";
 import { GraphView } from "./GraphView";
 import { ChevronDown } from "lucide-react";
+import { AiButton } from "@/components/ui/AiButton";
+import { polishChoiceLabel, polishChoiceCover } from "@/lib/ai";
 
 export function BranchesStep({ story, sceneOptions, showAdvancedGraph, onToggleAdvancedGraph, onBack, onNext, onSceneChange, onMoveScene, onRemoveScene }: {
   story: StoryDocument; sceneOptions: SelectOption[]; showAdvancedGraph: boolean; onToggleAdvancedGraph: () => void;
@@ -81,11 +83,36 @@ function BranchCard({ story, scene, sceneOptions, onSceneChange }: {
             ) : null}
           </div>
           {scene.choices.length ? scene.choices.map((choice) => (
-            <div key={choice.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_240px_auto] gap-2.5 p-3.5 rounded-[18px] bg-warm-soft border border-primary/12">
-              <Input value={choice.label} placeholder="按钮文案" onChange={(e) => patchChoices(scene.choices.map((c) => c.id === choice.id ? { ...c, label: e.target.value } : c))} />
-              <Input value={choice.coverText ?? ""} placeholder="按钮下的小提示（可选）" onChange={(e) => patchChoices(scene.choices.map((c) => c.id === choice.id ? { ...c, coverText: e.target.value } : c))} />
-              <SelectField value={choice.nextSceneId} options={sceneOptions} onValueChange={(value) => patchChoices(scene.choices.map((c) => c.id === choice.id ? { ...c, nextSceneId: value } : c))} />
-              <Button size="sm" variant="destructive" onClick={() => patchChoices(scene.choices.filter((c) => c.id !== choice.id))}>删除</Button>
+            <div key={choice.id} className="grid grid-cols-1 sm:grid-cols-[1.2fr_1.2fr_240px_auto] gap-3 p-3.5 rounded-[18px] bg-warm-soft border border-primary/12">
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-[10px] text-muted-foreground font-medium">按钮文案</span>
+                  <AiButton
+                    label="按钮文案"
+                    fetchOptions={() => polishChoiceLabel(story.title, scene.text, choice.label, story.petId)}
+                    onSelect={(r) => patchChoices(scene.choices.map((c) => c.id === choice.id ? { ...c, label: r } : c))}
+                  />
+                </div>
+                <Input value={choice.label} placeholder="按钮文案" onChange={(e) => patchChoices(scene.choices.map((c) => c.id === choice.id ? { ...c, label: e.target.value } : c))} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-[10px] text-muted-foreground font-medium">提示小字</span>
+                  <AiButton
+                    label="提示小字"
+                    fetchOptions={() => polishChoiceCover(story.title, scene.text, choice.label, choice.coverText ?? "", story.petId)}
+                    onSelect={(r) => patchChoices(scene.choices.map((c) => c.id === choice.id ? { ...c, coverText: r } : c))}
+                  />
+                </div>
+                <Input value={choice.coverText ?? ""} placeholder="按钮下的小提示（可选）" onChange={(e) => patchChoices(scene.choices.map((c) => c.id === choice.id ? { ...c, coverText: e.target.value } : c))} />
+              </div>
+              <div className="flex flex-col gap-1 justify-end">
+                <span className="text-[10px] text-muted-foreground font-medium px-1 mb-1 sm:block hidden">跳转到</span>
+                <SelectField value={choice.nextSceneId} options={sceneOptions} onValueChange={(value) => patchChoices(scene.choices.map((c) => c.id === choice.id ? { ...c, nextSceneId: value } : c))} />
+              </div>
+              <div className="flex flex-col justify-end">
+                <Button size="sm" variant="destructive" onClick={() => patchChoices(scene.choices.filter((c) => c.id !== choice.id))}>删除</Button>
+              </div>
             </div>
           )) : (
             <p className="text-sm text-muted">暂时不加分支也没关系，当前会继续到 <strong className="text-foreground">{linearNext ? `「${story.scenes.find((item) => item.id === linearNext)?.title || "下一段"}」` : "故事结尾"}</strong>。</p>
