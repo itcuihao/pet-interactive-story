@@ -34,20 +34,24 @@ type AppView = "workbench" | "gallery" | "editor";
 function parseRoute(): Route {
   const mainSearch = new URLSearchParams(window.location.search);
   let d = mainSearch.get("d");
+  console.log("[Route Debug] 正在解析当前路由。当前 URL Search:", window.location.search, "Hash:", window.location.hash);
   
   if (!d) {
     const s = mainSearch.get("s");
     if (s) {
+      console.log(`[Route Debug] 检测到 URL Search 中的本地短链 Key s="${s}"，尝试从 localStorage 获取对应故事数据载荷...`);
       try {
         const localShortKeys = JSON.parse(localStorage.getItem("pet-memory-short-links") || "{}");
         d = localShortKeys[s] || null;
+        console.log(`[Route Debug] 本地短链 Key s="${s}" 映射结果:`, d ? `存在载荷 (长度 ${d.length} 字符)` : "未找到映射数据");
       } catch (e) {
-        console.warn("Failed to load local short link", e);
+        console.warn("[Route Debug] 读取本地短链映射失败:", e);
       }
     }
   }
 
   if (d) {
+    console.log("[Route Debug] 成功提取到故事数据载荷 (来自于 URL Search)，路由将重定向为 'play-shared' 播放界面。");
     return { kind: "play-shared", data: d };
   }
 
@@ -58,21 +62,34 @@ function parseRoute(): Route {
   if (!hashD) {
     const hashS = search.get("s");
     if (hashS) {
+      console.log(`[Route Debug] 检测到 Hash 中的本地短链 Key s="${hashS}"，尝试从 localStorage 获取对应故事数据载荷...`);
       try {
         const localShortKeys = JSON.parse(localStorage.getItem("pet-memory-short-links") || "{}");
         hashD = localShortKeys[hashS] || null;
+        console.log(`[Route Debug] 本地短链 Key s="${hashS}" 映射结果:`, hashD ? `存在载荷 (长度 ${hashD.length} 字符)` : "未找到映射数据");
       } catch (e) {
-        console.warn("Failed to load local short link from hash", e);
+        console.warn("[Route Debug] 从 Hash 中读取本地短链映射失败:", e);
       }
     }
   }
 
   if (hashD) {
+    console.log("[Route Debug] 成功提取到故事数据载荷 (来自于 Hash)，路由将重定向为 'play-shared' 播放界面。");
     return { kind: "play-shared", data: hashD };
   }
 
-  if (path === "/preview" && search.get("id")) return { kind: "preview", id: search.get("id")! };
-  if (path.startsWith("/share/")) return { kind: "share", id: path.slice("/share/".length) };
+  if (path === "/preview" && search.get("id")) {
+    const previewId = search.get("id")!;
+    console.log(`[Route Debug] 匹配到预览路由 'preview'，故事ID: ${previewId}`);
+    return { kind: "preview", id: previewId };
+  }
+  if (path.startsWith("/share/")) {
+    const shareId = path.slice("/share/".length);
+    console.log(`[Route Debug] 匹配到分享路由 'share'，故事ID: ${shareId}`);
+    return { kind: "share", id: shareId };
+  }
+  
+  console.log("[Route Debug] 未匹配到分享/播放路由，指向主页 'home'。");
   return { kind: "home" };
 }
 
@@ -984,19 +1001,24 @@ function PlaySharedScreen({
     let active = true;
     setLoading(true);
     setError(null);
+    console.log(`[PlayShared Debug] 播放界面收到新故事数据，数据载荷长度: ${data.length} 字符。开始执行后台解密解压...`);
     decompressStory(data)
       .then((decoded) => {
         if (!active) return;
+        console.log(`[PlayShared Debug] 后台解码解压故事数据成功！故事标题: "${decoded.title}", 场景数: ${decoded.scenes?.length || 0}`);
         setStory(decoded);
         setLoading(false);
       })
       .catch((err) => {
         if (!active) return;
-        console.error(err);
-        setError("无法加载分享的故事，链接可能不完整或已被截断。");
+        console.error("[PlayShared Debug] 故事数据解码解压过程中捕获到异常错误:", err);
+        setError(`无法加载分享的故事。错误信息: ${err instanceof Error ? err.message : String(err)}。链接可能不完整或已被截断。`);
         setLoading(false);
       });
-    return () => { active = false; };
+    return () => {
+      console.log("[PlayShared Debug] 播放组件卸载或数据刷新，取消未完成的解码任务。");
+      active = false;
+    };
   }, [data]);
 
   const templates = useMemo(() => getTemplates(), []);
