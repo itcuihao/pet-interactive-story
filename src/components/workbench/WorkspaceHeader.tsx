@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Settings, Check, X, Loader2, Sparkles, PawPrint, Plus } from "lucide-react";
 import {
-  getMediaToken, setMediaToken, getMediaBaseUrl, setMediaBaseUrl,
+  getCustomMediaToken, setMediaToken, getMediaBaseUrl, setMediaBaseUrl,
   isMediaHostConfigured, testMediaConnection,
 } from "@/lib/settings";
 import {
@@ -171,7 +171,7 @@ function SettingsDialog() {
 
   // Media Settings State
   const [baseUrl, setBaseUrl] = useState(() => getMediaBaseUrl());
-  const [token, setToken] = useState(() => getMediaToken());
+  const [token, setToken] = useState(() => getCustomMediaToken());
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const configured = isMediaHostConfigured();
@@ -195,7 +195,7 @@ function SettingsDialog() {
     setOpen(v);
     if (v) {
       setBaseUrl(getMediaBaseUrl());
-      setToken(getMediaToken());
+      setToken(getCustomMediaToken());
       setTestResult(null);
 
       // Load AI configurations

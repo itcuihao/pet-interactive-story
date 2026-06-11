@@ -15,6 +15,10 @@ export function setMediaBaseUrl(url: string): void {
 }
 
 export function getMediaToken(): string {
+  return localStorage.getItem(TOKEN_KEY) || "firefly";
+}
+
+export function getCustomMediaToken(): string {
   return localStorage.getItem(TOKEN_KEY) || "";
 }
 
@@ -25,6 +29,7 @@ export function setMediaToken(token: string): void {
     localStorage.removeItem(TOKEN_KEY);
   }
 }
+
 
 export function isMediaHostConfigured(): boolean {
   return true; // 默认开启图床支持，不再强制要求配置 Token
