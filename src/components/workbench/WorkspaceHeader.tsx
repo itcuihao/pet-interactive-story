@@ -158,8 +158,16 @@ function PetsManagerDialog() {
 }
 
 function SettingsDialog() {
+  const isLocalDev = (import.meta as any).env.DEV || (typeof window !== "undefined" && (
+    window.location.hostname === "localhost" || 
+    window.location.hostname === "127.0.0.1" || 
+    window.location.hostname.endsWith(".local") ||
+    /^192\.168\./.test(window.location.hostname) ||
+    /^10\./.test(window.location.hostname) ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(window.location.hostname)
+  ));
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"media" | "ai">("media");
+  const [tab, setTab] = useState<"media" | "ai">(() => isLocalDev ? "media" : "ai");
 
   // Media Settings State
   const [baseUrl, setBaseUrl] = useState(() => getMediaBaseUrl());
@@ -372,30 +380,34 @@ function SettingsDialog() {
       <DialogContent className="sm:max-w-lg !max-h-[85vh] !grid !grid-rows-[auto_auto_1fr_auto]">
         <DialogHeader>
           <DialogTitle>设置</DialogTitle>
-          <DialogDescription>配置图床和 AI 助手服务。</DialogDescription>
+          <DialogDescription>
+            {isLocalDev ? "配置图床和 AI 助手服务。" : "配置 AI 助手服务。"}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex gap-1 p-1 rounded-xl bg-secondary">
-          <button
-            type="button"
-            onClick={() => setTab("media")}
-            className={`flex-1 text-sm py-1.5 rounded-lg transition-colors ${tab === "media" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            图床
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("ai")}
-            className={`flex-1 text-sm py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === "ai" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            AI 助手
-            {aiConfigured ? <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> : null}
-          </button>
-        </div>
+        {isLocalDev && (
+          <div className="flex gap-1 p-1 rounded-xl bg-secondary">
+            <button
+              type="button"
+              onClick={() => setTab("media")}
+              className={`flex-1 text-sm py-1.5 rounded-lg transition-colors ${tab === "media" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              图床
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("ai")}
+              className={`flex-1 text-sm py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${tab === "ai" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              AI 助手
+              {aiConfigured ? <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> : null}
+            </button>
+          </div>
+        )}
 
         <div className="overflow-y-auto -mx-4 px-4 py-2">
-          {tab === "media" ? (
+          {tab === "media" && isLocalDev ? (
             <div className="grid gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="base-url">服务地址</Label>
