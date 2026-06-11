@@ -1,4 +1,4 @@
-import { getMediaBaseUrl, getMediaToken } from "./settings";
+import { getMediaToken, resolveApiBase } from "./settings";
 
 export type MediaUploadResult = {
   mediaId: string;
@@ -7,19 +7,6 @@ export type MediaUploadResult = {
   sizeBytes: number;
 };
 
-/**
- * Resolve the API base URL:
- * - If configured URL points to localhost → use directly (no CORS issue)
- * - If running on localhost dev server and URL is remote → use Vite proxy (empty string)
- * - Otherwise → use the configured URL directly
- */
-function resolveApiBase(): string {
-  const configured = getMediaBaseUrl();
-  const isLocal = configured.includes("localhost") || configured.includes("127.0.0.1");
-  if (isLocal) return configured;
-  const isDev = typeof location !== "undefined" && location.hostname === "localhost";
-  return isDev ? "" : configured;
-}
 
 export async function uploadToMediaHost(
   file: File,

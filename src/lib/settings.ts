@@ -31,26 +31,41 @@ export function isMediaHostConfigured(): boolean {
 }
 
 /**
+ * Resolve the API base URL:
+ * - If configured URL points to localhost → use directly (no CORS issue)
+ * - If running on localhost dev server and URL is remote → use Vite proxy (empty string)
+ * - Otherwise → use the configured URL directly
+ */
+export function resolveApiBase(): string {
+  const configured = getMediaBaseUrl();
+  const isLocal = configured.includes("localhost") || configured.includes("127.0.0.1");
+  if (isLocal) return configured;
+  const isDev = typeof location !== "undefined" && location.hostname === "localhost";
+  return isDev ? "" : configured;
+}
+
+/**
  * Test the media host connection by calling the upload endpoint with an empty check.
  * Uses a lightweight GET to the meta endpoint or just validates the token format.
  */
 export async function testMediaConnection(): Promise<{ ok: boolean; message: string }> {
-  const baseUrl = getMediaBaseUrl();
+  const apiBase = resolveApiBase();
   const token = getMediaToken();
+  const displayUrl = getMediaBaseUrl();
 
   try {
     const headers: Record<string, string> = {};
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
-    const res = await fetch(`${baseUrl}/api/v1/media/upload`, {
+    const res = await fetch(`${apiBase}/api/v1/media/upload`, {
       method: "POST",
       headers,
       body: new FormData(),
     });
     // Even a 400 means the server is reachable and token was processed
     if (res.ok || res.status === 400 || res.status === 415) {
-      return { ok: true, message: `已连接 ${baseUrl}` };
+      return { ok: true, message: `已连接 ${displayUrl}` };
     }
     if (res.status === 401 || res.status === 403) {
       return { ok: false, message: "服务器可达，但 Token 无效。" };
@@ -60,4 +75,5 @@ export async function testMediaConnection(): Promise<{ ok: boolean; message: str
     return { ok: false, message: "无法连接到服务器，请检查地址。" };
   }
 }
+
 
