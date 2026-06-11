@@ -406,11 +406,11 @@ function SettingsDialog() {
                 </p>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="token">服务令牌</Label>
-                <Input id="token" type="password" value={token} placeholder="填入图床服务 Token" onChange={(e) => { setToken(e.target.value); setTestResult(null); }} />
+                <Label htmlFor="token">服务令牌（可选）</Label>
+                <Input id="token" type="password" value={token} placeholder="选填，默认图床无需填写" onChange={(e) => { setToken(e.target.value); setTestResult(null); }} />
               </div>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => void handleMediaTest()} disabled={testing || !token}>
+                <Button size="sm" variant="outline" onClick={() => void handleMediaTest()} disabled={testing}>
                   {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "测试连接"}
                 </Button>
                 {testResult && (

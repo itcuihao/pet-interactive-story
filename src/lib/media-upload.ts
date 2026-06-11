@@ -26,11 +26,6 @@ export async function uploadToMediaHost(
   usage: string = "story",
 ): Promise<MediaUploadResult> {
   const token = getMediaToken();
-
-  if (!token) {
-    throw new Error("图床服务未配置，请先在设置中填写 Token。");
-  }
-
   const apiBase = resolveApiBase();
 
   const formData = new FormData();
@@ -39,13 +34,17 @@ export async function uploadToMediaHost(
   formData.append("usage", usage);
   formData.append("member", "false");
 
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${apiBase}/api/v1/media/upload`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
     body: formData,
   });
+
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");

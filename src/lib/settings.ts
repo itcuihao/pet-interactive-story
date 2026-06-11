@@ -27,7 +27,7 @@ export function setMediaToken(token: string): void {
 }
 
 export function isMediaHostConfigured(): boolean {
-  return getMediaToken().length > 0;
+  return true; // 默认开启图床支持，不再强制要求配置 Token
 }
 
 /**
@@ -38,14 +38,14 @@ export async function testMediaConnection(): Promise<{ ok: boolean; message: str
   const baseUrl = getMediaBaseUrl();
   const token = getMediaToken();
 
-  if (!token) {
-    return { ok: false, message: "请先填写 Token。" };
-  }
-
   try {
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
     const res = await fetch(`${baseUrl}/api/v1/media/upload`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers,
       body: new FormData(),
     });
     // Even a 400 means the server is reachable and token was processed
@@ -60,3 +60,4 @@ export async function testMediaConnection(): Promise<{ ok: boolean; message: str
     return { ok: false, message: "无法连接到服务器，请检查地址。" };
   }
 }
+
